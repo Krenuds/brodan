@@ -63,11 +63,11 @@ class WhisperLiveClient:
                 "language": "en",
                 "task": "transcribe",
                 "model": "small",
-                "use_vad": True
+                "use_vad": False  # Disable aggressive VAD filtering
             }
             self.ws.send(json.dumps(options))
             self.handshake_complete = True
-            print("STT handshake sent")
+            print("STT handshake sent (VAD disabled)")
         except Exception as e:
             print(f"STT handshake error: {e}")
     
@@ -174,8 +174,24 @@ class WhisperLiveClient:
     
     def disconnect(self):
         """Clean disconnect"""
+        print("Disconnecting STT client...")
         self.connected = False
-        if self.ws:
-            self.ws.close()
-        if self.ws_thread:
-            self.ws_thread.join(timeout=5)
+        self.handshake_complete = False
+        
+        try:
+            if self.ws:
+                # Send close frame properly
+                self.ws.close()
+                self.ws = None
+        except Exception as e:
+            print(f"Error closing WebSocket: {e}")
+        
+        try:
+            if self.ws_thread and self.ws_thread.is_alive():
+                self.ws_thread.join(timeout=5)
+                if self.ws_thread.is_alive():
+                    print("Warning: STT thread did not terminate cleanly")
+        except Exception as e:
+            print(f"Error joining STT thread: {e}")
+        
+        print("STT client disconnected")

@@ -102,21 +102,32 @@ class STTAudioSink(discord.sinks.Sink):
             return False
     
     def _stereo_to_mono(self, stereo_data: bytes) -> bytes:
-        """Convert stereo PCM to mono by taking left channel"""
+        """Convert stereo PCM to mono by mixing both channels"""
         try:
-            # Assuming 16-bit samples, take every other sample (left channel)
+            if len(stereo_data) < 4:  # Need at least 4 bytes for one stereo sample
+                return stereo_data
+            
+            # Convert stereo to mono by averaging left and right channels
             mono_samples = []
-            for i in range(0, len(stereo_data), 4):  # 4 bytes = 2 samples of 16-bit
-                if i + 1 < len(stereo_data):
-                    # Extract left channel (first 2 bytes of each frame)
+            for i in range(0, len(stereo_data), 4):  # 4 bytes = 1 stereo frame (16-bit L + 16-bit R)
+                if i + 3 < len(stereo_data):
+                    # Extract left and right samples
                     left_sample = struct.unpack('<h', stereo_data[i:i+2])[0]
-                    mono_samples.append(left_sample)
+                    right_sample = struct.unpack('<h', stereo_data[i+2:i+4])[0]
+                    
+                    # Mix by averaging (prevent overflow)
+                    mixed_sample = (left_sample + right_sample) // 2
+                    mono_samples.append(mixed_sample)
+            
+            if not mono_samples:
+                return b''
             
             return struct.pack(f'<{len(mono_samples)}h', *mono_samples)
             
         except Exception as e:
             print(f"Stereo to mono conversion error: {e}")
-            return stereo_data
+            # Fallback: return original data truncated to valid length
+            return stereo_data[:len(stereo_data) - (len(stereo_data) % 4)]
     
     async def _send_to_stt(self, audio_data: bytes):
         """Send audio data to STT service"""
@@ -135,6 +146,12 @@ class STTAudioSink(discord.sinks.Sink):
                 await self.stt_client.send_audio(audio_data)
         except Exception as e:
             print(f"STT send error: {e}")
+    
+    def format_audio(self, audio):
+        """Required method for discord.sinks.Sink compatibility"""
+        # This method is called during cleanup - we don't need to format anything
+        # since we're processing audio in real-time via the write() method
+        pass
 
 
 class AudioProcessor:
