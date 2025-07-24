@@ -61,14 +61,42 @@ class VoiceBot(commands.Bot):
             try:
                 transcription = self.audio_processor.get_latest_transcription()
                 if transcription:
-                    text = transcription.get("text", "").strip()
-                    if text:
-                        print(f"🎤 Transcribed: {text}")
+                    self._display_transcription(transcription)
                 
                 await asyncio.sleep(0.1)  # Check every 100ms
             except Exception as e:
                 print(f"Transcription monitoring error: {e}")
                 await asyncio.sleep(1)
+    
+    def _display_transcription(self, transcription):
+        """Format and display transcription results"""
+        try:
+            text = transcription.get("text", "").strip()
+            if not text:
+                return
+            
+            # Get additional metadata if available
+            language = transcription.get("language", "")
+            confidence = transcription.get("confidence", "")
+            timestamp = transcription.get("timestamp", "")
+            
+            # Format the output
+            print("=" * 60)
+            print(f"🎤 TRANSCRIPTION:")
+            print(f"   Text: {text}")
+            
+            if language:
+                print(f"   Language: {language}")
+            if confidence:
+                print(f"   Confidence: {confidence}")
+            if timestamp:
+                print(f"   Timestamp: {timestamp}")
+                
+            print("=" * 60)
+            
+        except Exception as e:
+            print(f"Error displaying transcription: {e}")
+            print(f"Raw transcription data: {transcription}")
 
 
 

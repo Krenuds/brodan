@@ -70,11 +70,20 @@ class WhisperLiveClient:
         """Handle transcription results"""
         try:
             result = json.loads(message)
-            if result.get("text"):
-                print(f"STT Result: {result}")
+            print(f"📡 STT Raw Result: {result}")
+            
+            # Queue any result with text content
+            if result.get("text") and result.get("text").strip():
                 self.transcription_queue.put(result)
+            elif result.get("partial") and result.get("partial").strip():
+                # Handle partial transcriptions if available
+                partial_result = {"text": result.get("partial"), "type": "partial"}
+                print(f"🔄 STT Partial: {result.get('partial')}")
+                self.transcription_queue.put(partial_result)
+                
         except json.JSONDecodeError as e:
             print(f"STT JSON decode error: {e}")
+            print(f"Raw message: {message}")
     
     def _on_error(self, ws, error):
         """Handle WebSocket errors"""
