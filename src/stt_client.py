@@ -77,11 +77,25 @@ class WhisperLiveClient:
             result = json.loads(message)
             print(f"📡 STT Raw Result: {result}")
             
+            # Skip server ready messages
+            if result.get("message") == "SERVER_READY":
+                return
+            
             # Handle WhisperLive segments format
             if result.get("segments"):
                 for segment in result["segments"]:
                     text = segment.get("text", "").strip()
                     if text:
+                        # Avoid duplicate processing by checking segment key
+                        segment_key = f"{segment.get('start')}_{segment.get('end')}_{text}"
+                        if hasattr(self, '_processed_segments'):
+                            if segment_key in self._processed_segments:
+                                continue  # Skip already processed segment
+                        else:
+                            self._processed_segments = set()
+                        
+                        self._processed_segments.add(segment_key)
+                        
                         # Create transcription result with segment info
                         transcription = {
                             "text": text,
