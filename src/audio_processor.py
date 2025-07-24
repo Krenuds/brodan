@@ -10,7 +10,7 @@ from .audio_debug import audio_debugger
 class STTAudioSink(discord.sinks.Sink):
     """Custom audio sink for capturing Discord voice and streaming to STT"""
     
-    def __init__(self, stt_client: WhisperLiveClient, loop: asyncio.AbstractEventLoop, energy_threshold: int = 300):
+    def __init__(self, stt_client: WhisperLiveClient, loop: asyncio.AbstractEventLoop, energy_threshold: int = 50):
         super().__init__()
         self.stt_client = stt_client
         self.loop = loop  # Store reference to the bot's event loop
@@ -82,7 +82,20 @@ class STTAudioSink(discord.sinks.Sink):
             sum_squares = sum(sample * sample for sample in samples)
             rms = (sum_squares / len(samples)) ** 0.5
             
-            return rms > self.energy_threshold
+            is_speech = rms > self.energy_threshold
+            
+            # Log VAD decisions occasionally for debugging
+            if hasattr(self, '_vad_count'):
+                self._vad_count += 1
+            else:
+                self._vad_count = 1
+                
+            # Log every 50th decision to track VAD performance
+            if self._vad_count % 50 == 0:
+                status = "SPEECH" if is_speech else "SILENCE"
+                print(f"🎙️ VAD #{self._vad_count}: RMS={rms:.0f}, Threshold={self.energy_threshold}, Decision={status}")
+            
+            return is_speech
             
         except Exception as e:
             print(f"VAD error: {e}")
