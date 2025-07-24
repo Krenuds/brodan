@@ -3,6 +3,7 @@ from discord.ext import commands
 import os
 import asyncio
 from dotenv import load_dotenv
+from .audio_processor import AudioProcessor
 
 load_dotenv()
 
@@ -13,18 +14,27 @@ class VoiceBot(commands.Bot):
         intents.voice_states = True
         
         super().__init__(command_prefix="!", intents=intents)
+        self.audio_processor = AudioProcessor()
+        self.voice_client = None
         
     async def on_ready(self):
         print(f"🤖 Bot ready as {self.user}")
         print(f"📡 Connected to {len(self.guilds)} guilds")
         
-        # Auto-join Brodan channel
+        # Auto-join Brodan channel and start recording
         for guild in self.guilds:
             brodan_channel = discord.utils.get(guild.voice_channels, name="Brodan")
             if brodan_channel:
                 try:
-                    await brodan_channel.connect()
+                    self.voice_client = await brodan_channel.connect()
                     print(f"✅ Auto-joined Brodan channel in {guild.name}")
+                    
+                    # Initialize STT and start recording
+                    await self.audio_processor.initialize_stt()
+                    await self.audio_processor.start_recording(self.voice_client)
+                    
+                    # Start transcription monitoring
+                    asyncio.create_task(self._monitor_transcriptions())
                     break
                 except Exception as e:
                     print(f"❌ Failed to join Brodan channel: {e}")
@@ -32,15 +42,33 @@ class VoiceBot(commands.Bot):
         print("Ready to receive commands!")
         
     async def on_voice_state_update(self, member, before, after):
-        """Basic voice state tracking for testing"""
+        """Voice state tracking with recording management"""
         if member == self.user:
             return
             
         if after.channel and not before.channel:
             print(f"👋 User {member.display_name} joined voice channel: {after.channel.name}")
+            # User joined - ensure recording is active
+            if self.voice_client and not self.audio_processor.recording:
+                await self.audio_processor.start_recording(self.voice_client)
             
         elif before.channel and not after.channel:
             print(f"👋 User {member.display_name} left voice channel: {before.channel.name}")
+    
+    async def _monitor_transcriptions(self):
+        """Monitor and log transcription results"""
+        while True:
+            try:
+                transcription = self.audio_processor.get_latest_transcription()
+                if transcription:
+                    text = transcription.get("text", "").strip()
+                    if text:
+                        print(f"🎤 Transcribed: {text}")
+                
+                await asyncio.sleep(0.1)  # Check every 100ms
+            except Exception as e:
+                print(f"Transcription monitoring error: {e}")
+                await asyncio.sleep(1)
 
 
 
