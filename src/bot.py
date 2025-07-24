@@ -56,6 +56,24 @@ class VoiceBot(commands.Bot):
         
         print("Ready to receive commands!")
         
+    @commands.command(name="debug_audio")
+    async def debug_audio(self, ctx):
+        """Debug command to analyze recorded audio"""
+        await ctx.send("🎧 Analyzing recorded audio...")
+        self.audio_processor.get_audio_analysis()
+        await ctx.send("Check logs for audio analysis results!")
+        
+    @commands.command(name="stop_debug")
+    async def stop_debug(self, ctx):
+        """Stop audio recording and analyze"""
+        if self.audio_processor.recording:
+            self.audio_processor.stop_recording(self.voice_client)
+            await asyncio.sleep(1)  # Wait for files to close
+            self.audio_processor.get_audio_analysis()
+            await ctx.send("🎧 Audio recording stopped and analyzed - check logs!")
+        else:
+            await ctx.send("No recording in progress.")
+        
     async def on_voice_state_update(self, member, before, after):
         """Voice state tracking with recording management"""
         if member == self.user:
