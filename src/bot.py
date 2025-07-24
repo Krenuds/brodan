@@ -2,10 +2,24 @@ import discord
 from discord.ext import commands
 import os
 import asyncio
+import logging
 from dotenv import load_dotenv
 from .audio_processor import AudioProcessor
 
 load_dotenv()
+
+# Configure debug logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+
+# Enable discord.py debug logging
+discord_logger = logging.getLogger('discord')
+discord_logger.setLevel(logging.DEBUG)
 
 class VoiceBot(commands.Bot):
     def __init__(self):

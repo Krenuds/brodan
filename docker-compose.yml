@@ -11,6 +11,9 @@ services:
       - PYTHONPATH=/app
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
+      - PYTHONDEBUG=1
+      - PYTHONWARNINGS=all
+      - PYTHONASYNCIODEBUG=1
       - DISCORD_TOKEN=${DISCORD_TOKEN}
     stdin_open: true
     tty: true

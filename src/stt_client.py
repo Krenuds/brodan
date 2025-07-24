@@ -6,6 +6,11 @@ import time
 import numpy as np
 import uuid
 import struct
+import logging
+
+# Configure STT client logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class WhisperLiveClient:
     """WebSocket client for WhisperLive STT service"""
