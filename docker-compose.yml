@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+    stdin_open: true
+    tty: true
+    depends_on:
+      - whisper-stt
+      - piper-tts
+
+  whisper-stt:
+    image: ghcr.io/collabora/whisperlive-gpu:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - whisper-models:/root/.cache/whisper
+
+  piper-tts:
+    build: ./services/piper-http
+    ports:
+      - "8080:8080"
+    volumes:
+      - piper-models:/models
+
+volumes:
+  whisper-models:
+  piper-models:
