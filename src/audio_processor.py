@@ -102,6 +102,16 @@ class STTAudioSink(discord.sinks.Sink):
         """Send audio data to STT service"""
         try:
             if self.stt_client.connected:
+                # Log audio metrics occasionally 
+                if hasattr(self, '_audio_chunk_count'):
+                    self._audio_chunk_count += 1
+                else:
+                    self._audio_chunk_count = 1
+                
+                # Log every 100 chunks to avoid spam
+                if self._audio_chunk_count % 100 == 0:
+                    print(f"🎵 Audio metrics: {self._audio_chunk_count} chunks sent, {len(audio_data)} bytes/chunk")
+                
                 await self.stt_client.send_audio(audio_data)
         except Exception as e:
             print(f"STT send error: {e}")

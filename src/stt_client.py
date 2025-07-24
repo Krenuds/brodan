@@ -77,8 +77,29 @@ class WhisperLiveClient:
             result = json.loads(message)
             print(f"📡 STT Raw Result: {result}")
             
-            # Queue any result with text content
-            if result.get("text") and result.get("text").strip():
+            # Handle WhisperLive segments format
+            if result.get("segments"):
+                for segment in result["segments"]:
+                    text = segment.get("text", "").strip()
+                    if text:
+                        # Create transcription result with segment info
+                        transcription = {
+                            "text": text,
+                            "start": segment.get("start"),
+                            "end": segment.get("end"),
+                            "completed": segment.get("completed", True),
+                            "uid": result.get("uid"),
+                            "type": "partial" if not segment.get("completed", True) else "final"
+                        }
+                        
+                        # Log the transcription immediately
+                        status = "🔄 PARTIAL" if not segment.get("completed", True) else "✅ FINAL"
+                        print(f"{status} STT: '{text}' ({segment.get('start', 0)}s - {segment.get('end', 0)}s)")
+                        
+                        self.transcription_queue.put(transcription)
+            
+            # Handle direct text format (fallback for other message types)
+            elif result.get("text") and result.get("text").strip():
                 self.transcription_queue.put(result)
             elif result.get("partial") and result.get("partial").strip():
                 # Handle partial transcriptions if available

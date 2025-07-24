@@ -47,8 +47,9 @@ class VoiceBot(commands.Bot):
                     await self.audio_processor.initialize_stt()
                     await self.audio_processor.start_recording(self.voice_client)
                     
-                    # Start transcription monitoring
+                    # Start transcription monitoring and status reporting
                     asyncio.create_task(self._monitor_transcriptions())
+                    asyncio.create_task(self._status_reporter())
                     break
                 except Exception as e:
                     print(f"❌ Failed to join Brodan channel: {e}")
@@ -82,6 +83,28 @@ class VoiceBot(commands.Bot):
                 print(f"Transcription monitoring error: {e}")
                 await asyncio.sleep(1)
     
+    async def _status_reporter(self):
+        """Periodic status reporting for system health"""
+        while True:
+            try:
+                await asyncio.sleep(30)  # Report every 30 seconds
+                
+                # Check STT connection status
+                stt_status = "🟢 Connected" if self.audio_processor.stt_client.connected else "🔴 Disconnected"
+                recording_status = "🎙️ Recording" if self.audio_processor.recording else "⏸️ Stopped"
+                voice_status = "🔊 Connected" if self.voice_client and self.voice_client.is_connected() else "🔇 Disconnected"
+                
+                print("\n" + "=" * 60)
+                print("📊 SYSTEM STATUS REPORT")
+                print(f"   STT Service: {stt_status}")
+                print(f"   Voice Recording: {recording_status}")
+                print(f"   Discord Voice: {voice_status}")
+                print("=" * 60 + "\n")
+                
+            except Exception as e:
+                print(f"Status reporting error: {e}")
+                await asyncio.sleep(30)
+    
     def _display_transcription(self, transcription):
         """Format and display transcription results"""
         try:
@@ -89,24 +112,35 @@ class VoiceBot(commands.Bot):
             if not text:
                 return
             
-            # Get additional metadata if available
-            language = transcription.get("language", "")
-            confidence = transcription.get("confidence", "")
-            timestamp = transcription.get("timestamp", "")
+            # Get transcription metadata
+            start_time = transcription.get("start", "")
+            end_time = transcription.get("end", "")
+            transcription_type = transcription.get("type", "unknown")
+            completed = transcription.get("completed", True)
+            uid = transcription.get("uid", "")
+            
+            # Choose appropriate emoji and formatting
+            if transcription_type == "partial" or not completed:
+                icon = "🔄"
+                status = "PARTIAL"
+                border = "-" * 50
+            else:
+                icon = "🎤" 
+                status = "FINAL"
+                border = "=" * 50
             
             # Format the output
-            print("=" * 60)
-            print(f"🎤 TRANSCRIPTION:")
-            print(f"   Text: {text}")
+            print(border)
+            print(f"{icon} {status} TRANSCRIPTION:")
+            print(f"   📝 Text: {text}")
             
-            if language:
-                print(f"   Language: {language}")
-            if confidence:
-                print(f"   Confidence: {confidence}")
-            if timestamp:
-                print(f"   Timestamp: {timestamp}")
+            if start_time and end_time:
+                print(f"   ⏱️  Time: {start_time}s - {end_time}s")
+            
+            if uid:
+                print(f"   🆔 Session: {uid[:8]}...")
                 
-            print("=" * 60)
+            print(border)
             
         except Exception as e:
             print(f"Error displaying transcription: {e}")
