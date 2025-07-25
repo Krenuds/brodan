@@ -25,6 +25,9 @@ services:
     environment:
       - ASR_MODEL=base
       - ASR_ENGINE=openai_whisper
+      - ASR_MODEL_PATH=/data/whisper
+    volumes:
+      - whisper-models:/data/whisper
     expose:
       - "9000"
 

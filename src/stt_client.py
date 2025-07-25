@@ -25,8 +25,8 @@ class WhisperLiveClient:
         # Use provided values or fall back to config
         whisper_config = self.config.get('whisper', {})
         self.host = host or whisper_config.get('host', 'whisper-stt')
-        self.port = port or whisper_config.get('port', 9090)
-        self.base_url = f"http://{self.host}:{self.port}/v1"
+        self.port = port or whisper_config.get('port', 9000)
+        self.base_url = f"http://{self.host}:{self.port}"
         
         self.client = httpx.AsyncClient(timeout=30.0)
         self.transcription_queue = Queue()
@@ -108,7 +108,7 @@ class WhisperLiveClient:
             
             # Make request to whisper service /asr endpoint
             response = await self.client.post(
-                f"http://{self.host}:{self.port}/asr",
+                f"{self.base_url}/asr",
                 files=files,
                 params=params
             )
