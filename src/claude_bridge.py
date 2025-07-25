@@ -77,22 +77,54 @@ class ClaudeBridge:
         return any(keyword in words for keyword in command_keywords)
     
     async def _execute_claude_command(self, command: str) -> str:
-        """Execute command through Claude Code proxy with tool access"""
+        """Execute command through Claude Code CLI with tool access"""
         try:
-            # For now, provide intelligent mock responses to show the integration works
-            command_lower = command.lower()
+            # Execute the command using Claude Code CLI
+            logger.info(f"Executing Claude command: {command}")
             
-            if "create" in command_lower and "file" in command_lower:
-                return "I would create that file for you. Claude Code integration is working!"
-            elif "run" in command_lower and ("test" in command_lower or "build" in command_lower):
-                return "I would run those tests for you. The voice command system is functional!"
-            elif "edit" in command_lower or "modify" in command_lower:
-                return "I would edit that file for you. Voice-driven development is ready!"
-            elif "search" in command_lower or "find" in command_lower:
-                return "I would search through the codebase for you. All tools are accessible via voice!"
+            # Run claude CLI in non-interactive mode with the command
+            process = await asyncio.create_subprocess_exec(
+                'claude', 
+                '--non-interactive',
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd='/home/travis/brodan'  # Ensure we're in the project directory
+            )
+            
+            # Set timeout for Claude CLI execution (30 seconds)
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), 
+                    timeout=30.0
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                return "Command timed out after 30 seconds."
+            
+            if process.returncode == 0:
+                response = stdout.decode('utf-8').strip()
+                if not response:
+                    return "Command completed successfully."
+                return response
             else:
-                return f"I understand you want me to: {command}. The Claude Code bridge is working and ready for full tool integration!"
+                error_msg = stderr.decode('utf-8').strip()
+                logger.error(f"Claude CLI error (return code {process.returncode}): {error_msg}")
                 
+                # Provide more user-friendly error messages
+                if "command not found" in error_msg.lower():
+                    return "Claude Code CLI is not installed or not in PATH."
+                elif "permission denied" in error_msg.lower():
+                    return "Permission denied when executing command."
+                elif error_msg:
+                    return f"Command error: {error_msg}"
+                else:
+                    return f"Command failed with exit code {process.returncode}."
+                
+        except FileNotFoundError:
+            logger.error("Claude CLI not found")
+            return "Claude Code CLI is not installed. Please install Claude Code first."
         except Exception as e:
             logger.error(f"Error executing Claude command: {e}")
             return f"Failed to execute command: {str(e)}"
@@ -100,20 +132,50 @@ class ClaudeBridge:
     async def _claude_conversation(self, message: str) -> str:
         """Handle general conversation with Claude"""
         try:
-            # Provide intelligent conversational responses to show the system works
-            message_lower = message.lower()
+            # Use Claude Code CLI for general conversation
+            logger.info(f"Processing conversation: {message}")
             
-            if "hello" in message_lower or "hi" in message_lower:
-                return "Hello! I'm Claude Code integrated with your Discord voice bot. I can help with development tasks through voice commands!"
-            elif "how are you" in message_lower:
-                return "I'm working great! The voice-to-Claude integration is functioning perfectly. Try asking me to create a file or run a command!"
-            elif "what can you do" in message_lower:
-                return "I can execute development commands through voice! Try saying 'create a new file' or 'run the tests' and I'll handle it using Claude Code's tools."
-            elif "test" in message_lower:
-                return "The voice integration test is successful! I can hear you clearly and process both commands and conversations."
+            # Run claude CLI in non-interactive mode for conversation
+            process = await asyncio.create_subprocess_exec(
+                'claude', 
+                '--non-interactive',
+                message,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd='/home/travis/brodan'  # Ensure we're in the project directory
+            )
+            
+            # Set timeout for conversation (20 seconds)
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), 
+                    timeout=20.0
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                return "My response timed out. Could you try rephrasing your question?"
+            
+            if process.returncode == 0:
+                response = stdout.decode('utf-8').strip()
+                if not response:
+                    return "I don't have a response for that."
+                return response
             else:
-                return f"I understand you said: {message}. The Claude Code bridge is working perfectly and ready for full integration!"
+                error_msg = stderr.decode('utf-8').strip()
+                logger.error(f"Claude CLI conversation error (return code {process.returncode}): {error_msg}")
                 
+                # Provide more user-friendly error messages
+                if "command not found" in error_msg.lower():
+                    return "Claude Code CLI is not available for conversation."
+                elif error_msg:
+                    return f"I encountered an error: {error_msg}"
+                else:
+                    return "I encountered an unexpected error processing your message."
+                
+        except FileNotFoundError:
+            logger.error("Claude CLI not found for conversation")
+            return "Claude Code CLI is not installed. I can't process your message."
         except Exception as e:
             logger.error(f"Error in Claude conversation: {e}")
             return "I encountered an error processing your message."
