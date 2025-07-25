@@ -151,19 +151,23 @@ class WhisperLiveClient:
         return False
     
     def _pcm_to_float32(self, pcm_data: bytes) -> np.ndarray:
-        """Convert PCM bytes to float32 numpy array"""
+        """Convert PCM bytes to float32 numpy array and resample to 16kHz"""
         try:
             # Convert 16-bit PCM to numpy array
             if len(pcm_data) < 2:
                 return None
             
-            # Unpack as 16-bit signed integers
+            # Unpack as 16-bit signed integers  
             samples = struct.unpack(f'<{len(pcm_data)//2}h', pcm_data)
             
             # Convert to float32 and normalize to [-1, 1]
             audio_array = np.array(samples, dtype=np.float32) / 32768.0
             
-            return audio_array
+            # Resample from 48kHz (Discord) to 16kHz (WhisperLive requirement)
+            # Simple downsampling: take every 3rd sample (48000/16000 = 3)
+            resampled_array = audio_array[::3]
+            
+            return resampled_array
             
         except Exception as e:
             print(f"PCM to float32 conversion error: {e}")
