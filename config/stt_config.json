@@ -1,0 +1,28 @@
+{
+  "whisper": {
+    "host": "whisper-stt",
+    "port": 9090,
+    "model": "small",
+    "language": "en",
+    "task": "transcribe"
+  },
+  "vad": {
+    "enabled": true,
+    "min_silence_duration_ms": 1000,
+    "min_speech_duration_ms": 250,
+    "max_speech_duration_s": 30,
+    "speech_pad_ms": 200,
+    "threshold": 0.5
+  },
+  "audio": {
+    "energy_threshold": 50,
+    "sample_rate": 48000,
+    "target_sample_rate": 16000,
+    "channels": 2
+  },
+  "timeouts": {
+    "segment_timeout_s": 3.0,
+    "monitor_interval_s": 0.5,
+    "connection_timeout_s": 5.0
+  }
+}

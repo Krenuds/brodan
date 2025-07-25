@@ -7,6 +7,7 @@ import numpy as np
 import uuid
 import struct
 import logging
+import os
 
 # Configure STT client logging
 logger = logging.getLogger(__name__)
@@ -15,15 +16,29 @@ logger.setLevel(logging.WARNING)  # Only warnings and errors
 class WhisperLiveClient:
     """WebSocket client for WhisperLive STT service"""
     
-    def __init__(self, host="whisper-stt", port=9090):
-        self.url = f"ws://{host}:{port}"
+    def __init__(self, host=None, port=None):
+        # Load configuration
+        self.config = self._load_config()
+        
+        # Use provided values or fall back to config
+        whisper_config = self.config.get('whisper', {})
+        self.host = host or whisper_config.get('host', 'whisper-stt')
+        self.port = port or whisper_config.get('port', 9090)
+        self.url = f"ws://{self.host}:{self.port}"
+        
         self.ws = None
         self.transcription_queue = Queue()
         self.connected = False
         self.ws_thread = None
         self.uid = str(uuid.uuid4())
         self.handshake_complete = False
-        self.segment_timeout = 3.0  # 3 seconds timeout for partial segments
+        
+        # Load timeout settings
+        timeout_config = self.config.get('timeouts', {})
+        self.segment_timeout = timeout_config.get('segment_timeout_s', 3.0)
+        self.monitor_interval = timeout_config.get('monitor_interval_s', 0.5)
+        self.connection_timeout = timeout_config.get('connection_timeout_s', 5.0)
+        
         self.timeout_thread = None
         self.timeout_active = False
         
@@ -64,19 +79,28 @@ class WhisperLiveClient:
             self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed', 'last_update'}}
             self._start_timeout_monitor()
             
+            # Build options from config
+            whisper_config = self.config.get('whisper', {})
+            vad_config = self.config.get('vad', {})
+            
             options = {
                 "uid": self.uid,
-                "language": "en",
-                "task": "transcribe",
-                "model": "small",
-                "use_vad": True,   # Enable VAD for natural speech boundaries
-                # VAD parameters for faster segment finalization
-                "min_silence_duration_ms": 1000,    # 1 second silence before completing segment
-                "min_speech_duration_ms": 250,      # Minimum speech to avoid noise
-                "max_speech_duration_s": 30,        # Split very long segments
-                "speech_pad_ms": 200,               # Less padding for faster completion
-                "threshold": 0.5                    # Speech detection sensitivity
+                "language": whisper_config.get('language', 'en'),
+                "task": whisper_config.get('task', 'transcribe'),
+                "model": whisper_config.get('model', 'small'),
+                "use_vad": vad_config.get('enabled', True)
             }
+            
+            # Add VAD parameters if enabled
+            if vad_config.get('enabled', True):
+                options.update({
+                    "min_silence_duration_ms": vad_config.get('min_silence_duration_ms', 1000),
+                    "min_speech_duration_ms": vad_config.get('min_speech_duration_ms', 250),
+                    "max_speech_duration_s": vad_config.get('max_speech_duration_s', 30),
+                    "speech_pad_ms": vad_config.get('speech_pad_ms', 200),
+                    "threshold": vad_config.get('threshold', 0.5)
+                })
+            
             self.ws.send(json.dumps(options))
             self.handshake_complete = True
         except Exception as e:
@@ -221,7 +245,7 @@ class WhisperLiveClient:
         """Test basic connectivity to STT service"""
         try:
             # Simple connection test
-            test_ws = websocket.create_connection(self.url, timeout=5)
+            test_ws = websocket.create_connection(self.url, timeout=self.connection_timeout)
             test_ws.close()
             return True
         except Exception as e:
@@ -271,7 +295,7 @@ class WhisperLiveClient:
                         # Silently handle timeouts
                         self.transcription_queue.put(transcription)
                 
-                time.sleep(0.5)  # Check every 500ms
+                time.sleep(self.monitor_interval)
                 
             except Exception as e:
                 print(f"Error in timeout monitor: {e}")
@@ -298,4 +322,40 @@ class WhisperLiveClient:
                     print("Warning: STT thread did not terminate cleanly")
         except Exception as e:
             print(f"Error joining STT thread: {e}")
+    
+    def _load_config(self):
+        """Load configuration from file or use defaults"""
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'stt_config.json')
         
+        try:
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    return json.load(f)
+            else:
+                logging.warning(f"STT config file not found at {config_path}, using defaults")
+        except Exception as e:
+            logging.error(f"Error loading STT config: {e}, using defaults")
+        
+        # Return default configuration
+        return {
+            "whisper": {
+                "host": "whisper-stt",
+                "port": 9090,
+                "model": "small",
+                "language": "en",
+                "task": "transcribe"
+            },
+            "vad": {
+                "enabled": True,
+                "min_silence_duration_ms": 1000,
+                "min_speech_duration_ms": 250,
+                "max_speech_duration_s": 30,
+                "speech_pad_ms": 200,
+                "threshold": 0.5
+            },
+            "timeouts": {
+                "segment_timeout_s": 3.0,
+                "monitor_interval_s": 0.5,
+                "connection_timeout_s": 5.0
+            }
+        }

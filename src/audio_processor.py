@@ -3,6 +3,8 @@ import asyncio
 import audioop
 import struct
 import logging
+import json
+import os
 from typing import Optional
 from .stt_client import WhisperLiveClient
 
@@ -10,13 +12,16 @@ from .stt_client import WhisperLiveClient
 class STTAudioSink(discord.sinks.Sink):
     """Custom audio sink for capturing Discord voice and streaming to STT"""
     
-    def __init__(self, stt_client: WhisperLiveClient, loop: asyncio.AbstractEventLoop, energy_threshold: int = 50):
+    def __init__(self, stt_client: WhisperLiveClient, loop: asyncio.AbstractEventLoop, config: dict):
         super().__init__()
         self.stt_client = stt_client
         self.loop = loop  # Store reference to the bot's event loop
-        self.energy_threshold = energy_threshold
-        self.sample_rate = 48000  # Discord's sample rate
-        self.channels = 2  # Discord uses stereo
+        
+        # Load audio settings from config
+        audio_config = config.get('audio', {})
+        self.energy_threshold = audio_config.get('energy_threshold', 50)
+        self.sample_rate = audio_config.get('sample_rate', 48000)  # Discord's sample rate
+        self.channels = audio_config.get('channels', 2)  # Discord uses stereo
         self.frame_size = 3840  # 20ms frame at 48kHz stereo 16-bit
         
     def wants_opus(self) -> bool:
@@ -52,7 +57,7 @@ class STTAudioSink(discord.sinks.Sink):
             return super().write(data, user)
             
         except Exception as e:
-            pass  # Silently handle
+            logging.error(f"Error in STTAudioSink.write: {e}")
             # Always call parent write to maintain sink functionality
             return super().write(data, user)
     
@@ -62,7 +67,7 @@ class STTAudioSink(discord.sinks.Sink):
             # Use call_soon_threadsafe to schedule the coroutine in the bot's event loop
             asyncio.run_coroutine_threadsafe(self._send_to_stt(audio_data), self.loop)
         except Exception as e:
-            pass  # Silently handle
+            logging.error(f"Error scheduling STT send: {e}")
     
     def _is_speech(self, pcm_data: bytes) -> bool:
         """Basic voice activity detection using energy threshold"""
@@ -84,7 +89,7 @@ class STTAudioSink(discord.sinks.Sink):
             return is_speech
             
         except Exception as e:
-            pass  # Silently handle
+            logging.debug(f"Voice activity detection error: {e}")
             return False
     
     def _stereo_to_mono(self, stereo_data: bytes) -> bytes:
@@ -111,7 +116,7 @@ class STTAudioSink(discord.sinks.Sink):
             return struct.pack(f'<{len(mono_samples)}h', *mono_samples)
             
         except Exception as e:
-            pass  # Silently handle
+            logging.debug(f"Stereo to mono conversion error: {e}")
             # Fallback: return original data truncated to valid length
             return stereo_data[:len(stereo_data) - (len(stereo_data) % 4)]
     
@@ -122,7 +127,7 @@ class STTAudioSink(discord.sinks.Sink):
                 
                 await self.stt_client.send_audio(audio_data)
         except Exception as e:
-            pass  # Silently handle
+            logging.debug(f"Error sending audio to STT: {e}")
     
     def format_audio(self, audio):
         """Required method for discord.sinks.Sink compatibility"""
@@ -135,6 +140,7 @@ class AudioProcessor:
     """Main audio processing coordinator"""
     
     def __init__(self):
+        self.config = self._load_config()
         self.stt_client = WhisperLiveClient()
         self.audio_sink: Optional[STTAudioSink] = None
         self.recording = False
@@ -148,13 +154,13 @@ class AudioProcessor:
     
     def create_audio_sink(self, loop: asyncio.AbstractEventLoop) -> STTAudioSink:
         """Create new audio sink for voice capture"""
-        self.audio_sink = STTAudioSink(self.stt_client, loop)
+        self.audio_sink = STTAudioSink(self.stt_client, loop, self.config)
         return self.audio_sink
     
     async def start_recording(self, voice_client: discord.VoiceClient):
         """Start recording voice with STT processing"""
         if self.recording:
-            pass  # Already recording
+            logging.debug("Already recording")
             return
             
         try:
@@ -195,6 +201,27 @@ class AudioProcessor:
     
     def cleanup(self):
         """Clean up resources"""
-        audio_debugger.stop_recording()
         if self.stt_client:
             self.stt_client.disconnect()
+    
+    def _load_config(self):
+        """Load configuration from file or use defaults"""
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'stt_config.json')
+        
+        try:
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    return json.load(f)
+            else:
+                logging.warning(f"STT config file not found at {config_path}, using defaults")
+        except Exception as e:
+            logging.error(f"Error loading STT config: {e}, using defaults")
+        
+        # Return default configuration
+        return {
+            "audio": {
+                "energy_threshold": 50,
+                "sample_rate": 48000,
+                "channels": 2
+            }
+        }

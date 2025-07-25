@@ -1,5 +1,4 @@
 import discord
-from discord.ext import commands
 import os
 import asyncio
 import logging
@@ -21,13 +20,12 @@ logging.basicConfig(
 discord_logger = logging.getLogger('discord')
 discord_logger.setLevel(logging.ERROR)
 
-class VoiceBot(commands.Bot):
+class VoiceBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
-        intents.message_content = True
         intents.voice_states = True
         
-        super().__init__(command_prefix="!", intents=intents)
+        super().__init__(intents=intents)
         self.audio_processor = AudioProcessor()
         self.voice_client = None
         
