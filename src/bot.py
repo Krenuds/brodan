@@ -6,6 +6,7 @@ import threading
 from dotenv import load_dotenv
 from .audio_processor import AudioProcessor
 from .discord_audio_bridge import run_bridge_server
+from .service_checker import wait_for_services
 
 load_dotenv()
 
@@ -107,6 +108,33 @@ class VoiceBot(discord.Client):
 
 
 
+async def wait_and_start_bot():
+    """Wait for services and start the bot"""
+    # Wait for all backend services to be ready
+    services_ready = await wait_for_services()
+    
+    if not services_ready:
+        print("❌ STARTUP FAILED: Not all services are ready")
+        print("Please check your docker-compose logs and try again")
+        return False
+    
+    # Start Discord bot
+    bot = VoiceBot()
+    
+    token = os.getenv('DISCORD_TOKEN')
+    if not token:
+        print("❌ ERROR: DISCORD_TOKEN not found in environment variables")
+        print("Please check your .env file")
+        return False
+    
+    try:
+        await bot.start(token)
+    except Exception as e:
+        print(f"❌ Bot startup failed: {e}")
+        return False
+    
+    return True
+
 def main():
     # Start Discord Audio Bridge server in background thread
     bridge_port = int(os.getenv('DISCORD_AUDIO_BRIDGE_PORT', 9091))
@@ -118,16 +146,13 @@ def main():
     bridge_thread.start()
     print(f"🌉 Discord Audio Bridge started on port {bridge_port}")
     
-    # Start Discord bot
-    bot = VoiceBot()
-    
-    token = os.getenv('DISCORD_TOKEN')
-    if not token:
-        print("❌ ERROR: DISCORD_TOKEN not found in environment variables")
-        print("Please check your .env file")
-        return
-    
-    bot.run(token)
+    # Wait for services and start bot
+    try:
+        asyncio.run(wait_and_start_bot())
+    except KeyboardInterrupt:
+        print("\n🛑 Bot shutdown requested")
+    except Exception as e:
+        print(f"❌ Fatal error: {e}")
 
 if __name__ == "__main__":
     main()
