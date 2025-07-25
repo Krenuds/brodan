@@ -30,6 +30,7 @@ class VoiceBot(discord.Client):
         super().__init__(intents=intents)
         self.audio_processor = AudioProcessor()
         self.voice_client = None
+        self.last_transcription_text = ""  # Track last displayed text
         
     async def on_ready(self):
         print(f"🤖 Bot ready as {self.user}")
@@ -83,12 +84,13 @@ class VoiceBot(discord.Client):
             if not text:
                 return
             
+            # Skip duplicates
+            if text == self.last_transcription_text:
+                return
+            
             # Get transcription metadata
-            start_time = transcription.get("start", "")
-            end_time = transcription.get("end", "")
             transcription_type = transcription.get("type", "unknown")
             completed = transcription.get("completed", True)
-            uid = transcription.get("uid", "")
             
             # Simple output for transcriptions
             if transcription_type == "partial" or not completed:
@@ -97,6 +99,7 @@ class VoiceBot(discord.Client):
             else:
                 # Only show final transcriptions
                 print(f"🎤 {text}")
+                self.last_transcription_text = text
             
         except Exception as e:
             print(f"Error displaying transcription: {e}")

@@ -125,8 +125,6 @@ class WhisperLiveClient:
                 text = result.get('text', '').strip()
                 
                 if text:
-                    print(f"🎤 {text}")
-                    
                     # Create transcription result
                     transcription = {
                         "text": text,

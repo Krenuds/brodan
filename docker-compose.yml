@@ -22,17 +22,26 @@ services:
       - piper-tts
 
   whisper-stt:
-    image: onerahmet/openai-whisper-asr-webservice:latest
+    image: onerahmet/openai-whisper-asr-webservice:latest-gpu
     ports:
       - "9090:9000"
     environment:
       - ASR_MODEL=base
       - ASR_ENGINE=openai_whisper
       - ASR_MODEL_PATH=/data/whisper
+      - UVICORN_LOG_LEVEL=error
+      - UVICORN_ACCESS_LOG=false
     volumes:
       - whisper-models:/data/whisper
     expose:
       - "9000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   piper-tts:
     build: ./services/piper-http
