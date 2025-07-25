@@ -23,6 +23,9 @@ class WhisperLiveClient:
         self.ws_thread = None
         self.uid = str(uuid.uuid4())
         self.handshake_complete = False
+        self.segment_timeout = 3.0  # 3 seconds timeout for partial segments
+        self.timeout_thread = None
+        self.timeout_active = False
         
     def connect(self):
         """Establish WebSocket connection"""
@@ -59,18 +62,25 @@ class WhisperLiveClient:
         """Send initial handshake options to WhisperLive server"""
         try:
             # Clear processed segments on new session
-            self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed'}}
+            self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed', 'last_update'}}
+            self._start_timeout_monitor()
             
             options = {
                 "uid": self.uid,
                 "language": "en",
                 "task": "transcribe",
                 "model": "small",
-                "use_vad": True   # Enable VAD for natural speech boundaries
+                "use_vad": True,   # Enable VAD for natural speech boundaries
+                # VAD parameters for faster segment finalization
+                "min_silence_duration_ms": 1000,    # 1 second silence before completing segment
+                "min_speech_duration_ms": 250,      # Minimum speech to avoid noise
+                "max_speech_duration_s": 30,        # Split very long segments
+                "speech_pad_ms": 200,               # Less padding for faster completion
+                "threshold": 0.5                    # Speech detection sensitivity
             }
             self.ws.send(json.dumps(options))
             self.handshake_complete = True
-            print("STT handshake sent (VAD enabled)")
+            print("STT handshake sent (VAD enabled with 1s timeout)")
         except Exception as e:
             print(f"STT handshake error: {e}")
     
@@ -88,7 +98,7 @@ class WhisperLiveClient:
             if result.get("segments"):
                 # Initialize tracking if needed
                 if not hasattr(self, '_processed_segments'):
-                    self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed'}}
+                    self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed', 'last_update'}}
                 
                 # Process segments using timestamp-based tracking
                 for segment in result["segments"]:
@@ -110,7 +120,8 @@ class WhisperLiveClient:
                         should_process = True
                         self._processed_segments[segment_key] = {
                             'text': text,
-                            'completed': completed
+                            'completed': completed,
+                            'last_update': time.time()
                         }
                     else:
                         # Existing segment - check if it's been updated
@@ -123,7 +134,8 @@ class WhisperLiveClient:
                             # Update tracking
                             self._processed_segments[segment_key] = {
                                 'text': text,
-                                'completed': completed
+                                'completed': completed,
+                                'last_update': time.time()
                             }
                     
                     if should_process:
@@ -221,11 +233,61 @@ class WhisperLiveClient:
             print(f"STT connection test failed: {e}")
             return False
     
+    def _start_timeout_monitor(self):
+        """Start timeout monitoring thread"""
+        if self.timeout_thread and self.timeout_thread.is_alive():
+            self.timeout_active = False
+            self.timeout_thread.join()
+        
+        self.timeout_active = True
+        self.timeout_thread = threading.Thread(target=self._monitor_segment_timeouts)
+        self.timeout_thread.daemon = True
+        self.timeout_thread.start()
+    
+    def _monitor_segment_timeouts(self):
+        """Monitor partial segments and auto-complete them after timeout"""
+        while self.timeout_active and self.connected:
+            try:
+                current_time = time.time()
+                segments_to_complete = []
+                
+                # Check for timed-out partial segments
+                for segment_key, segment_data in self._processed_segments.items():
+                    if (not segment_data.get('completed', True) and 
+                        current_time - segment_data.get('last_update', current_time) > self.segment_timeout):
+                        segments_to_complete.append(segment_key)
+                
+                # Auto-complete timed-out segments
+                for segment_key in segments_to_complete:
+                    if segment_key in self._processed_segments:
+                        segment_data = self._processed_segments[segment_key]
+                        segment_data['completed'] = True
+                        
+                        # Create final transcription for timed-out segment
+                        transcription = {
+                            "text": segment_data['text'],
+                            "start": str(segment_key[0]),
+                            "end": str(segment_key[1]),
+                            "completed": True,
+                            "uid": self.uid,
+                            "type": "final"
+                        }
+                        
+                        print(f"⏰ TIMEOUT FINAL STT: '{segment_data['text']}' ({segment_key[0]}s - {segment_key[1]}s)")
+                        self.transcription_queue.put(transcription)
+                
+                time.sleep(0.5)  # Check every 500ms
+                
+            except Exception as e:
+                print(f"Error in timeout monitor: {e}")
+                time.sleep(1)
+    
     def disconnect(self):
         """Clean disconnect"""
         print("Disconnecting STT client...")
         self.connected = False
         self.handshake_complete = False
+        self.timeout_active = False
         
         try:
             if self.ws:
