@@ -25,9 +25,11 @@ async def synthesize(request: SynthesizeRequest):
         try:
             # Use subprocess to call piper with downloaded model
             model_path = f"/models/{request.voice}.onnx"
+            # Properly escape text for shell
+            escaped_text = request.text.replace("'", "'\"'\"'")
             result = subprocess.run([
                 "bash", "-c", 
-                f"echo '{request.text}' | piper --model {model_path} --output-file {audio_file_path}"
+                f"echo '{escaped_text}' | piper --model {model_path} --output-file {audio_file_path}"
             ], 
             capture_output=True, 
             text=True
