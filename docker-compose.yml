@@ -8,6 +8,7 @@ services:
       - "9091:9091"  # Discord Audio Bridge for voice-mode MCP
     volumes:
       - .:/app
+      - ~/.claude:/root/.claude
     environment:
       - PYTHONPATH=/app
       - PYTHONDONTWRITEBYTECODE=1
