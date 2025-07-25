@@ -58,6 +58,9 @@ class WhisperLiveClient:
     def _send_handshake(self):
         """Send initial handshake options to WhisperLive server"""
         try:
+            # Clear processed segments on new session
+            self._processed_segments = set()
+            
             options = {
                 "uid": self.uid,
                 "language": "en",
@@ -83,17 +86,22 @@ class WhisperLiveClient:
             
             # Handle WhisperLive segments format
             if result.get("segments"):
+                # Initialize tracking if needed
+                if not hasattr(self, '_processed_segments'):
+                    self._processed_segments = set()
+                
+                # Process only NEW segments (WhisperLive sends cumulative results)
                 for segment in result["segments"]:
                     text = segment.get("text", "").strip()
                     if text:
-                        # Avoid duplicate processing by checking segment key
-                        segment_key = f"{segment.get('start')}_{segment.get('end')}_{text}"
-                        if hasattr(self, '_processed_segments'):
-                            if segment_key in self._processed_segments:
-                                continue  # Skip already processed segment
-                        else:
-                            self._processed_segments = set()
+                        # Create a segment key based on text content only (timing can change)
+                        segment_key = text.strip()
                         
+                        # Skip already processed segments
+                        if segment_key in self._processed_segments:
+                            continue
+                        
+                        # Mark as processed
                         self._processed_segments.add(segment_key)
                         
                         # Create transcription result with segment info
