@@ -2,8 +2,10 @@ import discord
 import os
 import asyncio
 import logging
+import threading
 from dotenv import load_dotenv
 from .audio_processor import AudioProcessor
+from .discord_audio_bridge import run_bridge_server
 
 load_dotenv()
 
@@ -103,6 +105,17 @@ class VoiceBot(discord.Client):
 
 
 def main():
+    # Start Discord Audio Bridge server in background thread
+    bridge_port = int(os.getenv('DISCORD_AUDIO_BRIDGE_PORT', 9091))
+    bridge_thread = threading.Thread(
+        target=run_bridge_server,
+        args=(bridge_port,),
+        daemon=True
+    )
+    bridge_thread.start()
+    print(f"🌉 Discord Audio Bridge started on port {bridge_port}")
+    
+    # Start Discord bot
     bot = VoiceBot()
     
     token = os.getenv('DISCORD_TOKEN')

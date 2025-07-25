@@ -1,10 +1,50 @@
 # Git Log
 
-Generated on: 2025-07-24 22:49:18
+Generated on: 2025-07-24 23:00:13
 
 ## Last 10 Commits
 
-### 1. Commit: 53118513
+### 1. Commit: e67554b6
+
+- **Author:** Krenuds
+- **Date:** 2025-07-24 22:59:25 -0400
+- **Subject:** Phase 1 Immediate Fixes: Code review improvements and configuration corrections
+
+**Full Commit Message:**
+```
+Phase 1 Immediate Fixes: Code review improvements and configuration corrections
+
+🔧 CONFIGURATION FIXES:
+- Fix port fallback inconsistency: 9090 → 9000 in src/stt_client.py for container compatibility
+- Add model persistence: ASR_MODEL_PATH=/data/whisper with volume mapping to prevent re-downloads
+- Fix URL construction: Remove unused /v1 path and use consistent base_url property
+
+📦 DOCKER IMPROVEMENTS:
+- Add whisper-models:/data/whisper volume mapping to docker-compose.yml
+- Add ASR_MODEL_PATH environment variable for model caching
+- Verified onerahmet/openai-whisper-asr-webservice container integration
+
+✅ API ENDPOINT VALIDATION:
+- Confirmed /asr endpoint implementation matches official documentation
+- Verified request format: audio_file field, task=transcribe, output=json, language=en
+- No need for OpenAI /v1/audio/transcriptions endpoint (container uses /asr)
+
+🧪 TESTING COMPLETED:
+- All services running successfully with proper connectivity
+- whisper-stt service downloads base model to persistent cache (139MB)
+- App successfully connects to STT service after container startup
+- Docker logs show clean integration without connection errors
+
+Phase 1 code review fixes complete - ready for Phase 2 Discord Audio Bridge implementation.
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 2. Commit: 53118513
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 22:48:03 -0400
@@ -61,7 +101,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 2. Commit: 47c10c22
+### 3. Commit: 47c10c22
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 22:27:10 -0400
@@ -86,7 +126,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 3. Commit: c14f3702
+### 4. Commit: c14f3702
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 22:01:26 -0400
@@ -111,7 +151,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 4. Commit: 482d3a90
+### 5. Commit: 482d3a90
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:49:33 -0400
@@ -131,7 +171,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 5. Commit: efdc696b
+### 6. Commit: efdc696b
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:46:43 -0400
@@ -151,7 +191,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 6. Commit: e533c35c
+### 7. Commit: e533c35c
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:41:26 -0400
@@ -178,7 +218,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 7. Commit: 1b431b09
+### 8. Commit: 1b431b09
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:34:34 -0400
@@ -198,7 +238,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 8. Commit: 22be2460
+### 9. Commit: 22be2460
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:28:11 -0400
@@ -227,7 +267,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 9. Commit: 31040932
+### 10. Commit: 31040932
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:27:58 -0400
@@ -246,34 +286,6 @@ Remove debug audio component and clean up codebase
 
 The system now runs cleanly without any audio debugging functionality,
 reducing complexity and focusing on core transcription features.
-```
-
----
-
-### 10. Commit: e7c14d0f
-
-- **Author:** Krenuds
-- **Date:** 2025-07-24 21:26:13 -0400
-- **Subject:** Auto-commit: Task completed at Thu Jul 24 09:26:13 PM EDT 2025
-
-**Full Commit Message:**
-```
-Auto-commit: Task completed at Thu Jul 24 09:26:13 PM EDT 2025
-
-Changes made:
-- Dockerfile
-- debug_audio/processed_stt_20250725_012249.wav
-- debug_audio/processed_stt_20250725_012414.wav
-- debug_audio/raw_discord_20250725_012249.wav
-- debug_audio/raw_discord_20250725_012414.wav
-- git_log.md
-- makeLogs.py
-- src/audio_debug.py
-- src/audio_processor.py
-
-🤖 Generated with Claude Code
-
-Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 ---

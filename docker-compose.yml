@@ -5,6 +5,7 @@ services:
     build: .
     ports:
       - "8000:8000"
+      - "9091:9091"  # Discord Audio Bridge for voice-mode MCP
     volumes:
       - .:/app
     environment:
@@ -12,6 +13,8 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
       - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - WHISPER_CPP_BASE_URL=http://whisper-stt:9000
+      - DISCORD_AUDIO_BRIDGE_PORT=9091
     stdin_open: true
     tty: true
     depends_on:

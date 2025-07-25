@@ -7,6 +7,7 @@ import json
 import os
 from typing import Optional
 from .stt_client import WhisperLiveClient
+from .discord_audio_bridge import get_bridge_instance
 
 
 class STTAudioSink(discord.sinks.Sink):
@@ -23,6 +24,9 @@ class STTAudioSink(discord.sinks.Sink):
         self.sample_rate = audio_config.get('sample_rate', 48000)  # Discord's sample rate
         self.channels = audio_config.get('channels', 2)  # Discord uses stereo
         self.frame_size = 3840  # 20ms frame at 48kHz stereo 16-bit
+        
+        # Discord Audio Bridge integration
+        self.bridge = get_bridge_instance()
         
     def wants_opus(self) -> bool:
         """We want PCM data, not Opus"""
@@ -49,9 +53,12 @@ class STTAudioSink(discord.sinks.Sink):
                 # Convert stereo to mono for STT (take left channel)
                 mono_data = self._stereo_to_mono(pcm_data)
                 
-                
-                # Send to STT service using thread-safe method
+                # Send to both STT service and Discord Audio Bridge
                 self._schedule_stt_send(mono_data)
+                
+                # Send to Discord Audio Bridge for voice-mode MCP integration
+                if self.bridge and mono_data:
+                    self.bridge.add_discord_audio(mono_data)
             
             # Call parent write to maintain normal sink functionality
             return super().write(data, user)
