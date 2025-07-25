@@ -59,18 +59,18 @@ class WhisperLiveClient:
         """Send initial handshake options to WhisperLive server"""
         try:
             # Clear processed segments on new session
-            self._processed_segments = set()
+            self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed'}}
             
             options = {
                 "uid": self.uid,
                 "language": "en",
                 "task": "transcribe",
                 "model": "small",
-                "use_vad": False  # Disable aggressive VAD filtering
+                "use_vad": True   # Enable VAD for natural speech boundaries
             }
             self.ws.send(json.dumps(options))
             self.handshake_complete = True
-            print("STT handshake sent (VAD disabled)")
+            print("STT handshake sent (VAD enabled)")
         except Exception as e:
             print(f"STT handshake error: {e}")
     
@@ -88,35 +88,58 @@ class WhisperLiveClient:
             if result.get("segments"):
                 # Initialize tracking if needed
                 if not hasattr(self, '_processed_segments'):
-                    self._processed_segments = set()
+                    self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed'}}
                 
-                # Process only NEW segments (WhisperLive sends cumulative results)
+                # Process segments using timestamp-based tracking
                 for segment in result["segments"]:
                     text = segment.get("text", "").strip()
-                    if text:
-                        # Create a segment key based on text content only (timing can change)
-                        segment_key = text.strip()
+                    if not text:
+                        continue
                         
-                        # Skip already processed segments
-                        if segment_key in self._processed_segments:
-                            continue
+                    # Use start/end timestamps as unique segment identifier
+                    start_time = float(segment.get("start", 0))
+                    end_time = float(segment.get("end", 0))
+                    segment_key = (start_time, end_time)
+                    completed = segment.get("completed", True)
+                    
+                    # Check if this is a new segment or an update to existing segment
+                    should_process = False
+                    
+                    if segment_key not in self._processed_segments:
+                        # New segment - always process
+                        should_process = True
+                        self._processed_segments[segment_key] = {
+                            'text': text,
+                            'completed': completed
+                        }
+                    else:
+                        # Existing segment - check if it's been updated
+                        prev_segment = self._processed_segments[segment_key]
                         
-                        # Mark as processed
-                        self._processed_segments.add(segment_key)
-                        
+                        # Process if: text changed OR completion status changed
+                        if (text != prev_segment['text'] or 
+                            completed != prev_segment['completed']):
+                            should_process = True
+                            # Update tracking
+                            self._processed_segments[segment_key] = {
+                                'text': text,
+                                'completed': completed
+                            }
+                    
+                    if should_process:
                         # Create transcription result with segment info
                         transcription = {
                             "text": text,
                             "start": segment.get("start"),
                             "end": segment.get("end"),
-                            "completed": segment.get("completed", True),
+                            "completed": completed,
                             "uid": result.get("uid"),
-                            "type": "partial" if not segment.get("completed", True) else "final"
+                            "type": "partial" if not completed else "final"
                         }
                         
                         # Log the transcription immediately
-                        status = "🔄 PARTIAL" if not segment.get("completed", True) else "✅ FINAL"
-                        print(f"{status} STT: '{text}' ({segment.get('start', 0)}s - {segment.get('end', 0)}s)")
+                        status = "🔄 PARTIAL" if not completed else "✅ FINAL"
+                        print(f"{status} STT: '{text}' ({start_time}s - {end_time}s)")
                         
                         self.transcription_queue.put(transcription)
             
