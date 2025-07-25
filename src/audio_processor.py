@@ -5,7 +5,6 @@ import struct
 import logging
 from typing import Optional
 from .stt_client import WhisperLiveClient
-from .audio_debug import audio_debugger
 
 
 class STTAudioSink(discord.sinks.Sink):
@@ -39,16 +38,12 @@ class STTAudioSink(discord.sinks.Sink):
             if not pcm_data:
                 return super().write(data, user)
             
-            # Record raw audio for debugging
-            audio_debugger.record_raw_audio(pcm_data)
             
             # Simple voice activity detection
             if self._is_speech(pcm_data):
                 # Convert stereo to mono for STT (take left channel)
                 mono_data = self._stereo_to_mono(pcm_data)
                 
-                # Record processed audio for debugging
-                audio_debugger.record_processed_audio(mono_data)
                 
                 # Send to STT service using thread-safe method
                 self._schedule_stt_send(mono_data)
@@ -167,8 +162,6 @@ class AudioProcessor:
             if not self.stt_client.connected:
                 await self.initialize_stt()
             
-            # Start audio debugging
-            audio_debugger.start_recording()
             
             # Get the current event loop and create audio sink
             loop = asyncio.get_event_loop()
@@ -187,7 +180,6 @@ class AudioProcessor:
             
         try:
             voice_client.stop_recording()
-            audio_debugger.stop_recording()
             self.recording = False
         except Exception as e:
             logging.error(f"Error stopping recording: {e}")
@@ -200,9 +192,6 @@ class AudioProcessor:
         """Get latest transcription from STT service"""
         return self.stt_client.get_transcription()
     
-    def get_audio_analysis(self):
-        """Get audio debug analysis"""
-        return audio_debugger.analyze_audio_files()
     
     def cleanup(self):
         """Clean up resources"""

@@ -18,9 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Create debug directory for audio analysis
-RUN mkdir -p /app/debug_audio
-
 EXPOSE 8000
 
 # Default to running the test service, but can be overridden
