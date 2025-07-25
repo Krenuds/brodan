@@ -1,10 +1,157 @@
 # Git Log
 
-Generated on: 2025-07-24 21:24:17
+Generated on: 2025-07-24 21:47:15
 
-## Complete Git History (19 Commits)
+## Complete Git History (25 Commits)
 
-### 1. Commit: b0d1e402
+### 1. Commit: efdc696b
+
+- **Author:** Krenuds
+- **Date:** 2025-07-24 21:46:43 -0400
+- **Subject:** Auto-commit: Task completed at Thu Jul 24 09:46:43 PM EDT 2025
+
+**Full Commit Message:**
+```
+Auto-commit: Task completed at Thu Jul 24 09:46:43 PM EDT 2025
+
+Changes made:
+- Dockerfile
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 2. Commit: e533c35c
+
+- **Author:** Krenuds
+- **Date:** 2025-07-24 21:41:26 -0400
+- **Subject:** Auto-commit: Task completed at Thu Jul 24 09:41:26 PM EDT 2025
+
+**Full Commit Message:**
+```
+Auto-commit: Task completed at Thu Jul 24 09:41:26 PM EDT 2025
+
+Changes made:
+- SUCCESS_CRITERIA.md
+- config/bot_config.json
+- config/stt_config.json
+- docker-compose.yml
+- main.py
+- src/audio_processor.py
+- src/bot.py
+- src/stt_client.py
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 3. Commit: 1b431b09
+
+- **Author:** Krenuds
+- **Date:** 2025-07-24 21:34:34 -0400
+- **Subject:** Auto-commit: Task completed at Thu Jul 24 09:34:34 PM EDT 2025
+
+**Full Commit Message:**
+```
+Auto-commit: Task completed at Thu Jul 24 09:34:34 PM EDT 2025
+
+Changes made:
+- CLAUDE.md
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 4. Commit: 22be2460
+
+- **Author:** Krenuds
+- **Date:** 2025-07-24 21:28:11 -0400
+- **Subject:** Auto-commit: Task completed at Thu Jul 24 09:28:11 PM EDT 2025
+
+**Full Commit Message:**
+```
+Auto-commit: Task completed at Thu Jul 24 09:28:11 PM EDT 2025
+
+Changes made:
+- debug_audio/processed_stt_20250725_004931.wav
+- debug_audio/processed_stt_20250725_005052.wav
+- debug_audio/processed_stt_20250725_010723.wav
+- debug_audio/processed_stt_20250725_011228.wav
+- debug_audio/processed_stt_20250725_011357.wav
+- debug_audio/processed_stt_20250725_011627.wav
+- debug_audio/processed_stt_20250725_012043.wav
+- debug_audio/processed_stt_20250725_012249.wav
+- debug_audio/processed_stt_20250725_012414.wav
+- debug_audio/raw_discord_20250725_004931.wav
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 5. Commit: 31040932
+
+- **Author:** Krenuds
+- **Date:** 2025-07-24 21:27:58 -0400
+- **Subject:** Remove debug audio component and clean up codebase
+
+**Full Commit Message:**
+```
+Remove debug audio component and clean up codebase
+
+- Deleted src/audio_debug.py file
+- Removed all debug audio imports and references from audio_processor.py
+- Removed debug_audio directory creation from Dockerfile
+- Removed debug_audio and stop_debug commands from bot.py
+- Added debug_audio/ to .gitignore
+- Cleaned up unnecessary debug recording calls
+
+The system now runs cleanly without any audio debugging functionality,
+reducing complexity and focusing on core transcription features.
+```
+
+---
+
+### 6. Commit: e7c14d0f
+
+- **Author:** Krenuds
+- **Date:** 2025-07-24 21:26:13 -0400
+- **Subject:** Auto-commit: Task completed at Thu Jul 24 09:26:13 PM EDT 2025
+
+**Full Commit Message:**
+```
+Auto-commit: Task completed at Thu Jul 24 09:26:13 PM EDT 2025
+
+Changes made:
+- Dockerfile
+- debug_audio/processed_stt_20250725_012249.wav
+- debug_audio/processed_stt_20250725_012414.wav
+- debug_audio/raw_discord_20250725_012249.wav
+- debug_audio/raw_discord_20250725_012414.wav
+- git_log.md
+- makeLogs.py
+- src/audio_debug.py
+- src/audio_processor.py
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 7. Commit: b0d1e402
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:22:11 -0400
@@ -30,7 +177,7 @@ The logs now show:
 
 ---
 
-### 2. Commit: 547a4090
+### 8. Commit: 547a4090
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:19:15 -0400
@@ -59,7 +206,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 3. Commit: 23a1072e
+### 9. Commit: 23a1072e
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:08:37 -0400
@@ -90,7 +237,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 4. Commit: 7b9b2839
+### 10. Commit: 7b9b2839
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:53:53 -0400
@@ -116,7 +263,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 5. Commit: 03cffbdf
+### 11. Commit: 03cffbdf
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:51:09 -0400
@@ -140,7 +287,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 6. Commit: ac8c8244
+### 12. Commit: ac8c8244
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:29:07 -0400
@@ -163,7 +310,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 7. Commit: 9fc005f1
+### 13. Commit: 9fc005f1
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:22:34 -0400
@@ -187,7 +334,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 8. Commit: 0c04626f
+### 14. Commit: 0c04626f
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:18:04 -0400
@@ -216,7 +363,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 9. Commit: 55e39504
+### 15. Commit: 55e39504
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:56:33 -0400
@@ -239,7 +386,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 10. Commit: 27b62955
+### 16. Commit: 27b62955
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:56:19 -0400
@@ -263,7 +410,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 11. Commit: 929b3607
+### 17. Commit: 929b3607
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:46:56 -0400
@@ -288,7 +435,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 12. Commit: cde208cb
+### 18. Commit: cde208cb
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:39:15 -0400
@@ -310,7 +457,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 13. Commit: feb53b7d
+### 19. Commit: feb53b7d
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:36:05 -0400
@@ -335,7 +482,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 14. Commit: 92e04489
+### 20. Commit: 92e04489
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:28:22 -0400
@@ -362,7 +509,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 15. Commit: e4be8b13
+### 21. Commit: e4be8b13
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:21:27 -0400
@@ -397,7 +544,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 16. Commit: e7458d76
+### 22. Commit: e7458d76
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 17:34:02 -0400
@@ -426,7 +573,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 17. Commit: 0991485d
+### 23. Commit: 0991485d
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 17:28:56 -0400
@@ -449,7 +596,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 18. Commit: ec9be5cc
+### 24. Commit: ec9be5cc
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 17:23:19 -0400
@@ -494,7 +641,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 19. Commit: 3f25f30b
+### 25. Commit: 3f25f30b
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 17:02:53 -0400
