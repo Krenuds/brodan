@@ -5,7 +5,8 @@ Discord voice bot with STT/TTS integration using Docker Compose with 3 services.
 
 
 **CRITICAL RULES**
-- Start each session by reviewing git_log.md
+- Start each session by running 'python3 makeLogs.py' 
+- review the generated latest 3 commits at the top of the file.
 - Always consult github documentation for each module while planning. 
 - Test all code after finishing each task before moving on by reading the docker logs. 
 - When completing a phase, git commit with detailed comment.
