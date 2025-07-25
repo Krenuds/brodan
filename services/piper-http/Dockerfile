@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir \
     piper-tts \
     fastapi \
-    uvicorn
+    uvicorn \
+    numpy
 
 WORKDIR /app
 COPY server.py .
