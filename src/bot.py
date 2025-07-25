@@ -10,6 +10,7 @@ from .audio_processor import AudioProcessor
 from .discord_audio_bridge import run_bridge_server
 from .service_checker import wait_for_services
 from .tts_client import PiperTTSClient
+from .claude_bridge import ClaudeBridge
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ class VoiceBot(discord.Client):
         super().__init__(intents=intents)
         self.audio_processor = AudioProcessor()
         self.tts_client = PiperTTSClient()
+        self.claude_bridge = ClaudeBridge()
         self.voice_client = None
         self.last_transcription_text = ""  # Track last displayed text
         
@@ -132,8 +134,9 @@ class VoiceBot(discord.Client):
     async def _handle_voice_response(self, input_text: str):
         """Generate TTS response and play in voice channel"""
         try:
-            # Simple echo response for testing
-            response_text = f"I heard you say: {input_text}"
+            # Process input through Claude Code bridge
+            print(f"🔄 Processing with Claude: {input_text}")
+            response_text = await self.claude_bridge.process_voice_input(input_text)
             
             # Generate TTS audio
             audio_data = await self.tts_client.synthesize(response_text)

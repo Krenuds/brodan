@@ -1,10 +1,64 @@
 # Git Log
 
-Generated on: 2025-07-25 00:55:36
+Generated on: 2025-07-25 01:19:57
 
 ## Last 10 Commits
 
-### 1. Commit: eea029cb
+### 1. Commit: 5149af9a
+
+- **Author:** Krenuds
+- **Date:** 2025-07-25 01:19:05 -0400
+- **Subject:** Complete Voice Pipeline: Alba TTS Integration and Sine Wave Fix
+
+**Full Commit Message:**
+```
+Complete Voice Pipeline: Alba TTS Integration and Sine Wave Fix
+
+🎙️ TTS TRANSFORMATION COMPLETE:
+- Replaced placeholder sine wave generator with actual Piper TTS synthesis
+- Integrated Alba voice model (en_GB-alba-medium) - British English, 22kHz
+- Downloaded and configured 63MB ONNX model with JSON config files
+- Implemented proper Piper command-line interface with subprocess calls
+- Fixed TTS service to return actual WAV audio instead of test tones
+
+🔊 DISCORD AUDIO PIPELINE FIXED:
+- Added comprehensive TTS response logic to Discord bot
+- Implemented proper audio format conversion (mono 22kHz → stereo 48kHz)
+- Created temporary file handling for FFmpeg compatibility
+- Added audio feedback prevention with smart filtering
+- Integrated TTS client with PiperTTSClient using alba voice
+
+🛡️ AUDIO FEEDBACK PREVENTION:
+- Detection of repeated character patterns (feedback loops)
+- Blocks transcription during audio playback to prevent echo
+- Filters out very short utterances (< 3 characters)
+- Added partial transcription debugging output
+- Smart echo response: "I heard you say: [user input]"
+
+🏗️ DOCKER INFRASTRUCTURE UPDATES:
+- Added wget to piper-tts container for model downloads
+- Automated alba model download in Dockerfile build process
+- Updated default voice from lessac to alba across all components
+- Fixed TTS service HTTP responses to return actual audio content
+- Proper error handling for Piper synthesis failures
+
+✅ END-TO-END VOICE CONVERSATION WORKING:
+- STT: Whisper captures and transcribes Discord voice input
+- Processing: Smart filtering prevents feedback and processes final transcriptions
+- TTS: Alba voice generates natural British English speech responses
+- Audio: Proper format conversion and Discord voice channel playback
+- Result: Full conversational voice bot with quality British accent
+
+The Discord bot now provides complete voice interaction - listens, understands, and responds with natural alba speech. No more sine waves\!
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 2. Commit: eea029cb
 
 - **Author:** Krenuds
 - **Date:** 2025-07-25 00:44:13 -0400
@@ -41,7 +95,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 2. Commit: 82994771
+### 3. Commit: 82994771
 
 - **Author:** Krenuds
 - **Date:** 2025-07-25 00:37:15 -0400
@@ -84,7 +138,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 3. Commit: 0b6b3239
+### 4. Commit: 0b6b3239
 
 - **Author:** Krenuds
 - **Date:** 2025-07-25 00:25:45 -0400
@@ -127,7 +181,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 4. Commit: 5025f56b
+### 5. Commit: 5025f56b
 
 - **Author:** Krenuds
 - **Date:** 2025-07-25 00:00:29 -0400
@@ -169,7 +223,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 5. Commit: 78522dbd
+### 6. Commit: 78522dbd
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:56:28 -0400
@@ -214,7 +268,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 6. Commit: 06e799a7
+### 7. Commit: 06e799a7
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:49:29 -0400
@@ -253,7 +307,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 7. Commit: a9d5f48c
+### 8. Commit: a9d5f48c
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:37:11 -0400
@@ -289,7 +343,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 8. Commit: a4eeb55d
+### 9. Commit: a4eeb55d
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:28:04 -0400
@@ -344,7 +398,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 9. Commit: a38e5e46
+### 10. Commit: a38e5e46
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:12:49 -0400
@@ -382,46 +436,6 @@ Phase 2 Complete: Discord Audio Bridge for voice-mode MCP integration
 - ✓ whisper.cpp backend integration functional
 
 Ready for Phase 3: Voice-Mode MCP integration with Claude Code.
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
----
-
-### 10. Commit: e67554b6
-
-- **Author:** Krenuds
-- **Date:** 2025-07-24 22:59:25 -0400
-- **Subject:** Phase 1 Immediate Fixes: Code review improvements and configuration corrections
-
-**Full Commit Message:**
-```
-Phase 1 Immediate Fixes: Code review improvements and configuration corrections
-
-🔧 CONFIGURATION FIXES:
-- Fix port fallback inconsistency: 9090 → 9000 in src/stt_client.py for container compatibility
-- Add model persistence: ASR_MODEL_PATH=/data/whisper with volume mapping to prevent re-downloads
-- Fix URL construction: Remove unused /v1 path and use consistent base_url property
-
-📦 DOCKER IMPROVEMENTS:
-- Add whisper-models:/data/whisper volume mapping to docker-compose.yml
-- Add ASR_MODEL_PATH environment variable for model caching
-- Verified onerahmet/openai-whisper-asr-webservice container integration
-
-✅ API ENDPOINT VALIDATION:
-- Confirmed /asr endpoint implementation matches official documentation
-- Verified request format: audio_file field, task=transcribe, output=json, language=en
-- No need for OpenAI /v1/audio/transcriptions endpoint (container uses /asr)
-
-🧪 TESTING COMPLETED:
-- All services running successfully with proper connectivity
-- whisper-stt service downloads base model to persistent cache (139MB)
-- App successfully connects to STT service after container startup
-- Docker logs show clean integration without connection errors
-
-Phase 1 code review fixes complete - ready for Phase 2 Discord Audio Bridge implementation.
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
