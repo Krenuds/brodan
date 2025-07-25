@@ -70,23 +70,30 @@ class WhisperLiveClient:
     
     def _process_audio_buffer(self):
         """Process accumulated audio data periodically"""
-        while self.processing_active and self.connected:
-            try:
-                time.sleep(self.segment_timeout)  # Process every segment_timeout seconds
-                
-                audio_data = None
-                with self.buffer_lock:
-                    if self.audio_buffer.tell() > 0:
-                        # Get audio data from buffer
-                        audio_data = self.audio_buffer.getvalue()
-                        self.audio_buffer = io.BytesIO()  # Reset buffer
-                
-                if audio_data and len(audio_data) > 1024:  # Only process if we have enough audio
-                    asyncio.run(self._transcribe_audio(audio_data))
+        # Create a new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            while self.processing_active and self.connected:
+                try:
+                    time.sleep(self.segment_timeout)  # Process every segment_timeout seconds
                     
-            except Exception as e:
-                print(f"Error in audio processing: {e}")
-                time.sleep(1)
+                    audio_data = None
+                    with self.buffer_lock:
+                        if self.audio_buffer.tell() > 0:
+                            # Get audio data from buffer
+                            audio_data = self.audio_buffer.getvalue()
+                            self.audio_buffer = io.BytesIO()  # Reset buffer
+                    
+                    if audio_data and len(audio_data) > 1024:  # Only process if we have enough audio
+                        loop.run_until_complete(self._transcribe_audio(audio_data))
+                        
+                except Exception as e:
+                    print(f"Error in audio processing: {e}")
+                    time.sleep(1)
+        finally:
+            loop.close()
     
     async def _transcribe_audio(self, audio_data: bytes):
         """Send audio to whisper.cpp for transcription"""
@@ -234,7 +241,10 @@ class WhisperLiveClient:
             print(f"Error joining STT processing thread: {e}")
         
         try:
-            asyncio.run(self.client.aclose())
+            # Use a new event loop for cleanup
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self.client.aclose())
+            loop.close()
         except Exception as e:
             print(f"Error closing HTTP client: {e}")
     
