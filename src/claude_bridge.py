@@ -85,11 +85,11 @@ class ClaudeBridge:
             # Run claude CLI in non-interactive mode with the command
             process = await asyncio.create_subprocess_exec(
                 'claude', 
-                '--non-interactive',
+                '--print',
                 command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd='/home/travis/brodan'  # Ensure we're in the project directory
+                cwd='/app'  # Ensure we're in the project directory
             )
             
             # Set timeout for Claude CLI execution (30 seconds)
@@ -122,11 +122,13 @@ class ClaudeBridge:
                 else:
                     return f"Command failed with exit code {process.returncode}."
                 
-        except FileNotFoundError:
-            logger.error("Claude CLI not found")
+        except FileNotFoundError as e:
+            logger.error(f"Claude CLI not found: {e}")
             return "Claude Code CLI is not installed. Please install Claude Code first."
         except Exception as e:
             logger.error(f"Error executing Claude command: {e}")
+            logger.error(f"Exception type: {type(e)}")
+            # Return the actual error for debugging
             return f"Failed to execute command: {str(e)}"
     
     async def _claude_conversation(self, message: str) -> str:
@@ -138,11 +140,11 @@ class ClaudeBridge:
             # Run claude CLI in non-interactive mode for conversation
             process = await asyncio.create_subprocess_exec(
                 'claude', 
-                '--non-interactive',
+                '--print',
                 message,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd='/home/travis/brodan'  # Ensure we're in the project directory
+                cwd='/app'  # Ensure we're in the project directory
             )
             
             # Set timeout for conversation (20 seconds)
@@ -173,12 +175,14 @@ class ClaudeBridge:
                 else:
                     return "I encountered an unexpected error processing your message."
                 
-        except FileNotFoundError:
-            logger.error("Claude CLI not found for conversation")
+        except FileNotFoundError as e:
+            logger.error(f"Claude CLI not found for conversation: {e}")
             return "Claude Code CLI is not installed. I can't process your message."
         except Exception as e:
             logger.error(f"Error in Claude conversation: {e}")
-            return "I encountered an error processing your message."
+            logger.error(f"Exception type: {type(e)}")
+            # Return the actual error for debugging
+            return f"I encountered an error: {str(e)}"
     
     def _format_for_voice(self, text: str) -> str:
         """Format Claude's response for voice synthesis"""
