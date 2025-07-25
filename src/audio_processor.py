@@ -2,6 +2,7 @@ import discord
 import asyncio
 import audioop
 import struct
+import logging
 from typing import Optional
 from .stt_client import WhisperLiveClient
 from .audio_debug import audio_debugger
@@ -56,7 +57,7 @@ class STTAudioSink(discord.sinks.Sink):
             return super().write(data, user)
             
         except Exception as e:
-            print(f"Audio processing error: {e}")
+            pass  # Silently handle
             # Always call parent write to maintain sink functionality
             return super().write(data, user)
     
@@ -66,7 +67,7 @@ class STTAudioSink(discord.sinks.Sink):
             # Use call_soon_threadsafe to schedule the coroutine in the bot's event loop
             asyncio.run_coroutine_threadsafe(self._send_to_stt(audio_data), self.loop)
         except Exception as e:
-            print(f"Failed to schedule STT send: {e}")
+            pass  # Silently handle
     
     def _is_speech(self, pcm_data: bytes) -> bool:
         """Basic voice activity detection using energy threshold"""
@@ -84,21 +85,11 @@ class STTAudioSink(discord.sinks.Sink):
             
             is_speech = rms > self.energy_threshold
             
-            # Log VAD decisions occasionally for debugging
-            if hasattr(self, '_vad_count'):
-                self._vad_count += 1
-            else:
-                self._vad_count = 1
-                
-            # Log every 50th decision to track VAD performance
-            if self._vad_count % 50 == 0:
-                status = "SPEECH" if is_speech else "SILENCE"
-                print(f"🎙️ VAD #{self._vad_count}: RMS={rms:.0f}, Threshold={self.energy_threshold}, Decision={status}")
             
             return is_speech
             
         except Exception as e:
-            print(f"VAD error: {e}")
+            pass  # Silently handle
             return False
     
     def _stereo_to_mono(self, stereo_data: bytes) -> bytes:
@@ -125,7 +116,7 @@ class STTAudioSink(discord.sinks.Sink):
             return struct.pack(f'<{len(mono_samples)}h', *mono_samples)
             
         except Exception as e:
-            print(f"Stereo to mono conversion error: {e}")
+            pass  # Silently handle
             # Fallback: return original data truncated to valid length
             return stereo_data[:len(stereo_data) - (len(stereo_data) % 4)]
     
@@ -133,19 +124,10 @@ class STTAudioSink(discord.sinks.Sink):
         """Send audio data to STT service"""
         try:
             if self.stt_client.connected:
-                # Log audio metrics occasionally 
-                if hasattr(self, '_audio_chunk_count'):
-                    self._audio_chunk_count += 1
-                else:
-                    self._audio_chunk_count = 1
-                
-                # Log every 100 chunks to avoid spam
-                if self._audio_chunk_count % 100 == 0:
-                    print(f"🎵 Audio metrics: {self._audio_chunk_count} chunks sent, {len(audio_data)} bytes/chunk")
                 
                 await self.stt_client.send_audio(audio_data)
         except Exception as e:
-            print(f"STT send error: {e}")
+            pass  # Silently handle
     
     def format_audio(self, audio):
         """Required method for discord.sinks.Sink compatibility"""
@@ -164,12 +146,9 @@ class AudioProcessor:
         
     async def initialize_stt(self) -> bool:
         """Initialize STT connection"""
-        print("Connecting to STT service...")
         success = self.stt_client.connect()
-        if success:
-            print("STT service connected successfully")
-        else:
-            print("Failed to connect to STT service") 
+        if not success:
+            print("❌ Failed to connect to STT service") 
         return success
     
     def create_audio_sink(self, loop: asyncio.AbstractEventLoop) -> STTAudioSink:
@@ -180,7 +159,7 @@ class AudioProcessor:
     async def start_recording(self, voice_client: discord.VoiceClient):
         """Start recording voice with STT processing"""
         if self.recording:
-            print("Already recording")
+            pass  # Already recording
             return
             
         try:
@@ -196,10 +175,9 @@ class AudioProcessor:
             sink = self.create_audio_sink(loop)
             voice_client.start_recording(sink, self._recording_finished)
             self.recording = True
-            print("Started voice recording with STT processing")
             
         except Exception as e:
-            print(f"Failed to start recording: {e}")
+            logging.error(f"Failed to start recording: {e}")
             self.recording = False
     
     def stop_recording(self, voice_client: discord.VoiceClient):
@@ -211,13 +189,12 @@ class AudioProcessor:
             voice_client.stop_recording()
             audio_debugger.stop_recording()
             self.recording = False
-            print("Stopped voice recording")
         except Exception as e:
-            print(f"Error stopping recording: {e}")
+            logging.error(f"Error stopping recording: {e}")
     
     def _recording_finished(self, sink: discord.sinks.Sink, channel: discord.abc.Connectable, *args):
         """Callback when recording finishes"""
-        print("Recording session finished")
+        pass
     
     def get_latest_transcription(self):
         """Get latest transcription from STT service"""

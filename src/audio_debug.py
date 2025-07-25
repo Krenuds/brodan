@@ -43,9 +43,6 @@ class AudioDebugger:
             self.processed_audio_file.setframerate(48000)  # 48kHz
             
             self.recording = True
-            print(f"🎧 Audio debug recording started:")
-            print(f"   Raw Discord: {raw_path}")
-            print(f"   Processed STT: {processed_path}")
     
     def record_raw_audio(self, audio_data: bytes):
         """Record raw audio from Discord"""
@@ -54,7 +51,7 @@ class AudioDebugger:
                 try:
                     self.raw_audio_file.writeframes(audio_data)
                 except Exception as e:
-                    print(f"Error recording raw audio: {e}")
+                    pass  # Silently handle
     
     def record_processed_audio(self, audio_data: bytes):
         """Record processed audio being sent to STT"""
@@ -63,7 +60,7 @@ class AudioDebugger:
                 try:
                     self.processed_audio_file.writeframes(audio_data)
                 except Exception as e:
-                    print(f"Error recording processed audio: {e}")
+                    pass  # Silently handle
     
     def stop_recording(self):
         """Stop recording and close files"""
@@ -81,10 +78,9 @@ class AudioDebugger:
                     self.processed_audio_file = None
                     
                 self.recording = False
-                print("🎧 Audio debug recording stopped")
                 
             except Exception as e:
-                print(f"Error stopping audio recording: {e}")
+                pass  # Silently handle
     
     def analyze_audio_files(self):
         """Analyze recorded audio files for debugging"""

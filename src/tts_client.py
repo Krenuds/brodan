@@ -2,6 +2,7 @@ import requests
 import io
 from typing import Optional
 import time
+import logging
 
 class PiperTTSClient:
     """HTTP client for Piper TTS service"""
@@ -25,15 +26,14 @@ class PiperTTSClient:
             
             if response.status_code == 200:
                 result = response.json()
-                print(f"TTS Response: {result}")
                 # For now, return placeholder data since we're testing connectivity
                 return b"placeholder_audio_data"
             else:
-                print(f"TTS Error: {response.status_code} - {response.text}")
+                logging.error(f"TTS Error: {response.status_code} - {response.text}")
                 return None
                 
         except requests.RequestException as e:
-            print(f"TTS Request Error: {e}")
+            logging.error(f"TTS Request Error: {e}")
             return None
     
     def test_connection(self):
@@ -42,13 +42,12 @@ class PiperTTSClient:
             response = requests.get(f"{self.base_url}/health", timeout=5)
             if response.status_code == 200:
                 result = response.json()
-                print(f"TTS Health Check: {result}")
                 return True
             else:
-                print(f"TTS Health Check Failed: {response.status_code}")
+                logging.error(f"TTS Health Check Failed: {response.status_code}")
                 return False
         except requests.RequestException as e:
-            print(f"TTS connection test failed: {e}")
+            logging.error(f"TTS connection test failed: {e}")
             return False
     
     def get_voices(self):
@@ -59,5 +58,5 @@ class PiperTTSClient:
                 return response.json()
             return None
         except requests.RequestException as e:
-            print(f"Error getting voices: {e}")
+            logging.error(f"Error getting voices: {e}")
             return None
