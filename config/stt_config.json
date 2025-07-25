@@ -1,7 +1,7 @@
 {
   "whisper": {
     "host": "whisper-stt",
-    "port": 9090,
+    "port": 9000,
     "model": "small",
     "language": "en",
     "task": "transcribe"

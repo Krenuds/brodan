@@ -1,4 +1,4 @@
-import websocket
+import httpx
 import json
 import threading
 from queue import Queue
@@ -8,13 +8,15 @@ import uuid
 import struct
 import logging
 import os
+import asyncio
+import io
 
 # Configure STT client logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)  # Only warnings and errors
 
 class WhisperLiveClient:
-    """WebSocket client for WhisperLive STT service"""
+    """HTTP client for whisper.cpp STT service with OpenAI-compatible API"""
     
     def __init__(self, host=None, port=None):
         # Load configuration
@@ -24,192 +26,159 @@ class WhisperLiveClient:
         whisper_config = self.config.get('whisper', {})
         self.host = host or whisper_config.get('host', 'whisper-stt')
         self.port = port or whisper_config.get('port', 9090)
-        self.url = f"ws://{self.host}:{self.port}"
+        self.base_url = f"http://{self.host}:{self.port}/v1"
         
-        self.ws = None
+        self.client = httpx.AsyncClient(timeout=30.0)
         self.transcription_queue = Queue()
         self.connected = False
-        self.ws_thread = None
         self.uid = str(uuid.uuid4())
-        self.handshake_complete = False
+        
+        # Audio buffer for accumulating chunks
+        self.audio_buffer = io.BytesIO()
+        self.buffer_lock = threading.Lock()
         
         # Load timeout settings
         timeout_config = self.config.get('timeouts', {})
         self.segment_timeout = timeout_config.get('segment_timeout_s', 3.0)
-        self.monitor_interval = timeout_config.get('monitor_interval_s', 0.5)
         self.connection_timeout = timeout_config.get('connection_timeout_s', 5.0)
         
-        self.timeout_thread = None
-        self.timeout_active = False
+        # Processing state
+        self.last_transcription_time = time.time()
+        self.processing_thread = None
+        self.processing_active = False
         
     def connect(self):
-        """Establish WebSocket connection"""
+        """Test HTTP connection to whisper.cpp server"""
         try:
-            self.ws = websocket.WebSocketApp(
-                self.url,
-                on_message=self._on_message,
-                on_error=self._on_error,
-                on_close=self._on_close,
-                on_open=self._on_open
-            )
+            # Test connection with docs endpoint (no health endpoint available)
+            response = httpx.get(f"http://{self.host}:{self.port}/docs", timeout=self.connection_timeout)
+            self.connected = response.status_code == 200
             
-            # Run in separate thread
-            self.ws_thread = threading.Thread(target=self.ws.run_forever)
-            self.ws_thread.daemon = True
-            self.ws_thread.start()
+            if self.connected:
+                # Start audio processing thread
+                self.processing_active = True
+                self.processing_thread = threading.Thread(target=self._process_audio_buffer)
+                self.processing_thread.daemon = True
+                self.processing_thread.start()
             
-            # Wait for connection to establish using configured timeout
-            handshake_wait = self.config.get('timeouts', {}).get('handshake_wait_s', 2.0)
-            time.sleep(handshake_wait)
             return self.connected
             
         except Exception as e:
             print(f"STT Connection Error: {e}")
+            self.connected = False
             return False
     
-    def _on_open(self, ws):
-        """Handle WebSocket connection opened"""
-        self.connected = True
-        # Send handshake options
-        self._send_handshake()
+    def _process_audio_buffer(self):
+        """Process accumulated audio data periodically"""
+        while self.processing_active and self.connected:
+            try:
+                time.sleep(self.segment_timeout)  # Process every segment_timeout seconds
+                
+                audio_data = None
+                with self.buffer_lock:
+                    if self.audio_buffer.tell() > 0:
+                        # Get audio data from buffer
+                        audio_data = self.audio_buffer.getvalue()
+                        self.audio_buffer = io.BytesIO()  # Reset buffer
+                
+                if audio_data and len(audio_data) > 1024:  # Only process if we have enough audio
+                    asyncio.run(self._transcribe_audio(audio_data))
+                    
+            except Exception as e:
+                print(f"Error in audio processing: {e}")
+                time.sleep(1)
     
-    def _send_handshake(self):
-        """Send initial handshake options to WhisperLive server"""
+    async def _transcribe_audio(self, audio_data: bytes):
+        """Send audio to whisper.cpp for transcription"""
         try:
-            # Clear processed segments on new session
-            self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed', 'last_update'}}
-            self._start_timeout_monitor()
-            
-            # Build options from config
-            whisper_config = self.config.get('whisper', {})
-            vad_config = self.config.get('vad', {})
-            
-            options = {
-                "uid": self.uid,
-                "language": whisper_config.get('language', 'en'),
-                "task": whisper_config.get('task', 'transcribe'),
-                "model": whisper_config.get('model', 'small'),
-                "use_vad": vad_config.get('enabled', True)
-            }
-            
-            # Add VAD parameters if enabled
-            if vad_config.get('enabled', True):
-                options.update({
-                    "min_silence_duration_ms": vad_config.get('min_silence_duration_ms', 1000),
-                    "min_speech_duration_ms": vad_config.get('min_speech_duration_ms', 250),
-                    "max_speech_duration_s": vad_config.get('max_speech_duration_s', 30),
-                    "speech_pad_ms": vad_config.get('speech_pad_ms', 200),
-                    "threshold": vad_config.get('threshold', 0.5)
-                })
-            
-            self.ws.send(json.dumps(options))
-            self.handshake_complete = True
-        except Exception as e:
-            print(f"STT handshake error: {e}")
-    
-    def _on_message(self, ws, message):
-        """Handle transcription results"""
-        try:
-            result = json.loads(message)
-            
-            # Skip server ready messages
-            if result.get("message") == "SERVER_READY":
+            # Convert PCM to WAV format for the API
+            wav_data = self._pcm_to_wav(audio_data)
+            if not wav_data:
                 return
             
-            # Handle WhisperLive segments format
-            if result.get("segments"):
-                # Initialize tracking if needed
-                if not hasattr(self, '_processed_segments'):
-                    self._processed_segments = {}  # Track by timestamp: {(start, end): {'text', 'completed', 'last_update'}}
-                
-                # Process segments using timestamp-based tracking
-                for segment in result["segments"]:
-                    text = segment.get("text", "").strip()
-                    if not text:
-                        continue
-                        
-                    # Use start/end timestamps as unique segment identifier
-                    start_time = float(segment.get("start", 0))
-                    end_time = float(segment.get("end", 0))
-                    segment_key = (start_time, end_time)
-                    completed = segment.get("completed", True)
-                    
-                    # Check if this is a new segment or an update to existing segment
-                    should_process = False
-                    
-                    if segment_key not in self._processed_segments:
-                        # New segment - always process
-                        should_process = True
-                        self._processed_segments[segment_key] = {
-                            'text': text,
-                            'completed': completed,
-                            'last_update': time.time()
-                        }
-                    else:
-                        # Existing segment - check if it's been updated
-                        prev_segment = self._processed_segments[segment_key]
-                        
-                        # Process if: text changed OR completion status changed
-                        if (text != prev_segment['text'] or 
-                            completed != prev_segment['completed']):
-                            should_process = True
-                            # Update tracking
-                            self._processed_segments[segment_key] = {
-                                'text': text,
-                                'completed': completed,
-                                'last_update': time.time()
-                            }
-                    
-                    if should_process:
-                        # Create transcription result with segment info
-                        transcription = {
-                            "text": text,
-                            "start": segment.get("start"),
-                            "end": segment.get("end"),
-                            "completed": completed,
-                            "uid": result.get("uid"),
-                            "type": "partial" if not completed else "final"
-                        }
-                        
-                        # Only log final transcriptions
-                        if completed:
-                            print(f"🎤 {text}")
-                        
-                        self.transcription_queue.put(transcription)
+            # Prepare multipart form data for /asr endpoint
+            files = {
+                'audio_file': ('audio.wav', wav_data, 'audio/wav')
+            }
+            params = {
+                'task': 'transcribe',
+                'language': self.config.get('whisper', {}).get('language', 'en'),
+                'output': 'json'
+            }
             
-            # Handle direct text format (fallback for other message types)
-            elif result.get("text") and result.get("text").strip():
-                self.transcription_queue.put(result)
-            elif result.get("partial") and result.get("partial").strip():
-                # Handle partial transcriptions if available
-                partial_result = {"text": result.get("partial"), "type": "partial"}
-                self.transcription_queue.put(partial_result)
+            # Make request to whisper service /asr endpoint
+            response = await self.client.post(
+                f"http://{self.host}:{self.port}/asr",
+                files=files,
+                params=params
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                text = result.get('text', '').strip()
                 
-        except json.JSONDecodeError as e:
-            print(f"STT JSON decode error: {e}")
-            print(f"Raw message: {message}")
+                if text:
+                    print(f"🎤 {text}")
+                    
+                    # Create transcription result
+                    transcription = {
+                        "text": text,
+                        "start": 0,
+                        "end": self.segment_timeout,
+                        "completed": True,
+                        "uid": self.uid,
+                        "type": "final"
+                    }
+                    
+                    self.transcription_queue.put(transcription)
+                    self.last_transcription_time = time.time()
+            
+        except Exception as e:
+            print(f"Transcription error: {e}")
     
-    def _on_error(self, ws, error):
-        """Handle WebSocket errors"""
-        logging.error(f"STT WebSocket error: {error}")
-        self.connected = False
-    
-    def _on_close(self, ws, close_status_code, close_msg):
-        """Handle WebSocket connection closed"""
-        self.connected = False
+    def _pcm_to_wav(self, pcm_data: bytes) -> bytes:
+        """Convert PCM data to WAV format for whisper.cpp API"""
+        try:
+            # Convert 16-bit PCM to numpy array and resample
+            audio_array = self._pcm_to_float32(pcm_data)
+            if audio_array is None:
+                return None
+            
+            # Convert float32 back to 16-bit PCM for WAV
+            audio_int16 = (audio_array * 32767).astype(np.int16)
+            
+            # Create WAV header
+            sample_rate = 16000  # whisper.cpp expects 16kHz
+            num_channels = 1
+            bits_per_sample = 16
+            byte_rate = sample_rate * num_channels * bits_per_sample // 8
+            block_align = num_channels * bits_per_sample // 8
+            data_size = len(audio_int16) * 2  # 2 bytes per sample
+            
+            # WAV header (44 bytes)
+            wav_header = struct.pack('<4sI4s4sIHHIIHH4sI',
+                b'RIFF', 36 + data_size, b'WAVE', b'fmt ', 16,
+                1, num_channels, sample_rate, byte_rate, block_align, bits_per_sample,
+                b'data', data_size
+            )
+            
+            # Combine header and audio data
+            wav_data = wav_header + audio_int16.tobytes()
+            
+            return wav_data
+        except Exception as e:
+            print(f"PCM to WAV conversion error: {e}")
+            return None
     
     async def send_audio(self, audio_chunk: bytes):
-        """Send audio chunk to WhisperLive as float32 numpy array"""
-        if self.ws and self.connected and self.handshake_complete:
+        """Buffer audio chunk for periodic transcription"""
+        if self.connected and len(audio_chunk) > 0:
             try:
-                # Convert PCM bytes to float32 numpy array
-                audio_array = self._pcm_to_float32(audio_chunk)
-                if audio_array is not None:
-                    # Send as binary WebSocket message
-                    self.ws.send(audio_array.tobytes(), opcode=websocket.ABNF.OPCODE_BINARY)
-                    return True
+                with self.buffer_lock:
+                    self.audio_buffer.write(audio_chunk)
+                return True
             except Exception as e:
-                print(f"Error sending audio: {e}")
+                print(f"Error buffering audio: {e}")
                 return False
         return False
     
@@ -245,84 +214,29 @@ class WhisperLiveClient:
     def test_connection(self):
         """Test basic connectivity to STT service"""
         try:
-            # Simple connection test
-            test_ws = websocket.create_connection(self.url, timeout=self.connection_timeout)
-            test_ws.close()
-            return True
+            response = httpx.get(f"http://{self.host}:{self.port}/docs", timeout=self.connection_timeout)
+            return response.status_code == 200
         except Exception as e:
             print(f"STT connection test failed: {e}")
             return False
     
-    def _start_timeout_monitor(self):
-        """Start timeout monitoring thread"""
-        if self.timeout_thread and self.timeout_thread.is_alive():
-            self.timeout_active = False
-            self.timeout_thread.join()
-        
-        self.timeout_active = True
-        self.timeout_thread = threading.Thread(target=self._monitor_segment_timeouts)
-        self.timeout_thread.daemon = True
-        self.timeout_thread.start()
-    
-    def _monitor_segment_timeouts(self):
-        """Monitor partial segments and auto-complete them after timeout"""
-        while self.timeout_active and self.connected:
-            try:
-                current_time = time.time()
-                segments_to_complete = []
-                
-                # Check for timed-out partial segments
-                for segment_key, segment_data in self._processed_segments.items():
-                    if (not segment_data.get('completed', True) and 
-                        current_time - segment_data.get('last_update', current_time) > self.segment_timeout):
-                        segments_to_complete.append(segment_key)
-                
-                # Auto-complete timed-out segments
-                for segment_key in segments_to_complete:
-                    if segment_key in self._processed_segments:
-                        segment_data = self._processed_segments[segment_key]
-                        segment_data['completed'] = True
-                        
-                        # Create final transcription for timed-out segment
-                        transcription = {
-                            "text": segment_data['text'],
-                            "start": str(segment_key[0]),
-                            "end": str(segment_key[1]),
-                            "completed": True,
-                            "uid": self.uid,
-                            "type": "final"
-                        }
-                        
-                        # Silently handle timeouts
-                        self.transcription_queue.put(transcription)
-                
-                time.sleep(self.monitor_interval)
-                
-            except Exception as e:
-                print(f"Error in timeout monitor: {e}")
-                time.sleep(1)
-    
     def disconnect(self):
         """Clean disconnect"""
         self.connected = False
-        self.handshake_complete = False
-        self.timeout_active = False
+        self.processing_active = False
         
         try:
-            if self.ws:
-                # Send close frame properly
-                self.ws.close()
-                self.ws = None
+            if self.processing_thread and self.processing_thread.is_alive():
+                self.processing_thread.join(timeout=5)
+                if self.processing_thread.is_alive():
+                    print("Warning: STT processing thread did not terminate cleanly")
         except Exception as e:
-            print(f"Error closing WebSocket: {e}")
+            print(f"Error joining STT processing thread: {e}")
         
         try:
-            if self.ws_thread and self.ws_thread.is_alive():
-                self.ws_thread.join(timeout=5)
-                if self.ws_thread.is_alive():
-                    print("Warning: STT thread did not terminate cleanly")
+            asyncio.run(self.client.aclose())
         except Exception as e:
-            print(f"Error joining STT thread: {e}")
+            print(f"Error closing HTTP client: {e}")
     
     def _load_config(self):
         """Load configuration from file or use defaults"""
@@ -341,7 +255,7 @@ class WhisperLiveClient:
         return {
             "whisper": {
                 "host": "whisper-stt",
-                "port": 9090,
+                "port": 9000,
                 "model": "small",
                 "language": "en",
                 "task": "transcribe"

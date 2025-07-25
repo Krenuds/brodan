@@ -146,11 +146,23 @@ class AudioProcessor:
         self.recording = False
         
     async def initialize_stt(self) -> bool:
-        """Initialize STT connection"""
-        success = self.stt_client.connect()
-        if not success:
-            print("❌ Failed to connect to STT service") 
-        return success
+        """Initialize STT connection with retry logic"""
+        max_retries = 5
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            success = self.stt_client.connect()
+            if success:
+                print("✅ Connected to STT service")
+                return True
+            
+            if attempt < max_retries - 1:
+                print(f"⏳ STT connection attempt {attempt + 1} failed, retrying in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
+            else:
+                print("❌ Failed to connect to STT service after all retries")
+        
+        return False
     
     def create_audio_sink(self, loop: asyncio.AbstractEventLoop) -> STTAudioSink:
         """Create new audio sink for voice capture"""

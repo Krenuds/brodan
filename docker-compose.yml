@@ -19,11 +19,14 @@ services:
       - piper-tts
 
   whisper-stt:
-    image: ghcr.io/collabora/whisperlive-gpu:latest
+    image: onerahmet/openai-whisper-asr-webservice:latest
     ports:
-      - "9090:9090"
-    volumes:
-      - whisper-models:/root/.cache/whisper
+      - "9090:9000"
+    environment:
+      - ASR_MODEL=base
+      - ASR_ENGINE=openai_whisper
+    expose:
+      - "9000"
 
   piper-tts:
     build: ./services/piper-http
