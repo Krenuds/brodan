@@ -209,8 +209,10 @@ class AudioProcessor:
         except Exception as e:
             logging.error(f"Error stopping recording: {e}")
     
-    def _recording_finished(self, sink: discord.sinks.Sink, channel: discord.abc.Connectable, *args):
+    def _recording_finished(self, sink: discord.sinks.Sink, *args):
         """Callback when recording finishes"""
+        # Handle variable arguments as Discord.py may pass different parameters
+        logging.debug(f"Recording finished with sink: {sink}, args: {args}")
         pass
     
     def get_latest_transcription(self):
