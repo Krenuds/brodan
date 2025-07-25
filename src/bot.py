@@ -8,18 +8,18 @@ from .audio_processor import AudioProcessor
 
 load_dotenv()
 
-# Configure debug logging
+# Configure logging - only critical and transcription data
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.WARNING,  # Only warnings and above
+    format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler()
     ]
 )
 
-# Enable discord.py debug logging
+# Suppress discord.py logging except errors
 discord_logger = logging.getLogger('discord')
-discord_logger.setLevel(logging.DEBUG)
+discord_logger.setLevel(logging.ERROR)
 
 class VoiceBot(commands.Bot):
     def __init__(self):
@@ -33,7 +33,6 @@ class VoiceBot(commands.Bot):
         
     async def on_ready(self):
         print(f"🤖 Bot ready as {self.user}")
-        print(f"📡 Connected to {len(self.guilds)} guilds")
         
         # Auto-join Brodan channel and start recording
         for guild in self.guilds:
@@ -41,20 +40,17 @@ class VoiceBot(commands.Bot):
             if brodan_channel:
                 try:
                     self.voice_client = await brodan_channel.connect()
-                    print(f"✅ Auto-joined Brodan channel in {guild.name}")
+                    print(f"✅ Connected to Brodan channel")
                     
                     # Initialize STT and start recording
                     await self.audio_processor.initialize_stt()
                     await self.audio_processor.start_recording(self.voice_client)
                     
-                    # Start transcription monitoring and status reporting
+                    # Start transcription monitoring only
                     asyncio.create_task(self._monitor_transcriptions())
-                    asyncio.create_task(self._status_reporter())
                     break
                 except Exception as e:
                     print(f"❌ Failed to join Brodan channel: {e}")
-        
-        print("Ready to receive commands!")
         
     @commands.command(name="debug_audio")
     async def debug_audio(self, ctx):
@@ -80,13 +76,9 @@ class VoiceBot(commands.Bot):
             return
             
         if after.channel and not before.channel:
-            print(f"👋 User {member.display_name} joined voice channel: {after.channel.name}")
             # User joined - ensure recording is active
             if self.voice_client and not self.audio_processor.recording:
                 await self.audio_processor.start_recording(self.voice_client)
-            
-        elif before.channel and not after.channel:
-            print(f"👋 User {member.display_name} left voice channel: {before.channel.name}")
     
     async def _monitor_transcriptions(self):
         """Monitor and log transcription results"""
@@ -100,28 +92,6 @@ class VoiceBot(commands.Bot):
             except Exception as e:
                 print(f"Transcription monitoring error: {e}")
                 await asyncio.sleep(1)
-    
-    async def _status_reporter(self):
-        """Periodic status reporting for system health"""
-        while True:
-            try:
-                await asyncio.sleep(30)  # Report every 30 seconds
-                
-                # Check STT connection status
-                stt_status = "🟢 Connected" if self.audio_processor.stt_client.connected else "🔴 Disconnected"
-                recording_status = "🎙️ Recording" if self.audio_processor.recording else "⏸️ Stopped"
-                voice_status = "🔊 Connected" if self.voice_client and self.voice_client.is_connected() else "🔇 Disconnected"
-                
-                print("\n" + "=" * 60)
-                print("📊 SYSTEM STATUS REPORT")
-                print(f"   STT Service: {stt_status}")
-                print(f"   Voice Recording: {recording_status}")
-                print(f"   Discord Voice: {voice_status}")
-                print("=" * 60 + "\n")
-                
-            except Exception as e:
-                print(f"Status reporting error: {e}")
-                await asyncio.sleep(30)
     
     def _display_transcription(self, transcription):
         """Format and display transcription results"""
@@ -137,28 +107,13 @@ class VoiceBot(commands.Bot):
             completed = transcription.get("completed", True)
             uid = transcription.get("uid", "")
             
-            # Choose appropriate emoji and formatting
+            # Simple output for transcriptions
             if transcription_type == "partial" or not completed:
-                icon = "🔄"
-                status = "PARTIAL"
-                border = "-" * 50
+                # Skip partial transcriptions to reduce noise
+                return
             else:
-                icon = "🎤" 
-                status = "FINAL"
-                border = "=" * 50
-            
-            # Format the output
-            print(border)
-            print(f"{icon} {status} TRANSCRIPTION:")
-            print(f"   📝 Text: {text}")
-            
-            if start_time and end_time:
-                print(f"   ⏱️  Time: {start_time}s - {end_time}s")
-            
-            if uid:
-                print(f"   🆔 Session: {uid[:8]}...")
-                
-            print(border)
+                # Only show final transcriptions
+                print(f"🎤 {text}")
             
         except Exception as e:
             print(f"Error displaying transcription: {e}")

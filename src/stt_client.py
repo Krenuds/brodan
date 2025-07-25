@@ -10,7 +10,7 @@ import logging
 
 # Configure STT client logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)  # Only warnings and errors
 
 class WhisperLiveClient:
     """WebSocket client for WhisperLive STT service"""
@@ -53,7 +53,6 @@ class WhisperLiveClient:
     
     def _on_open(self, ws):
         """Handle WebSocket connection opened"""
-        print("STT WebSocket connected")
         self.connected = True
         # Send handshake options
         self._send_handshake()
@@ -80,7 +79,6 @@ class WhisperLiveClient:
             }
             self.ws.send(json.dumps(options))
             self.handshake_complete = True
-            print("STT handshake sent (VAD enabled with 1s timeout)")
         except Exception as e:
             print(f"STT handshake error: {e}")
     
@@ -88,7 +86,6 @@ class WhisperLiveClient:
         """Handle transcription results"""
         try:
             result = json.loads(message)
-            print(f"📡 STT Raw Result: {result}")
             
             # Skip server ready messages
             if result.get("message") == "SERVER_READY":
@@ -149,9 +146,9 @@ class WhisperLiveClient:
                             "type": "partial" if not completed else "final"
                         }
                         
-                        # Log the transcription immediately
-                        status = "🔄 PARTIAL" if not completed else "✅ FINAL"
-                        print(f"{status} STT: '{text}' ({start_time}s - {end_time}s)")
+                        # Only log final transcriptions
+                        if completed:
+                            print(f"🎤 {text}")
                         
                         self.transcription_queue.put(transcription)
             
@@ -161,7 +158,6 @@ class WhisperLiveClient:
             elif result.get("partial") and result.get("partial").strip():
                 # Handle partial transcriptions if available
                 partial_result = {"text": result.get("partial"), "type": "partial"}
-                print(f"🔄 STT Partial: {result.get('partial')}")
                 self.transcription_queue.put(partial_result)
                 
         except json.JSONDecodeError as e:
@@ -170,12 +166,11 @@ class WhisperLiveClient:
     
     def _on_error(self, ws, error):
         """Handle WebSocket errors"""
-        print(f"STT WebSocket error: {error}")
+        logging.error(f"STT WebSocket error: {error}")
         self.connected = False
     
     def _on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket connection closed"""
-        print("STT WebSocket connection closed")
         self.connected = False
     
     async def send_audio(self, audio_chunk: bytes):
@@ -273,7 +268,7 @@ class WhisperLiveClient:
                             "type": "final"
                         }
                         
-                        print(f"⏰ TIMEOUT FINAL STT: '{segment_data['text']}' ({segment_key[0]}s - {segment_key[1]}s)")
+                        # Silently handle timeouts
                         self.transcription_queue.put(transcription)
                 
                 time.sleep(0.5)  # Check every 500ms
@@ -284,7 +279,6 @@ class WhisperLiveClient:
     
     def disconnect(self):
         """Clean disconnect"""
-        print("Disconnecting STT client...")
         self.connected = False
         self.handshake_complete = False
         self.timeout_active = False
@@ -305,4 +299,3 @@ class WhisperLiveClient:
         except Exception as e:
             print(f"Error joining STT thread: {e}")
         
-        print("STT client disconnected")
