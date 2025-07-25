@@ -58,8 +58,9 @@ class WhisperLiveClient:
             self.ws_thread.daemon = True
             self.ws_thread.start()
             
-            # Wait a bit for connection to establish
-            time.sleep(2)
+            # Wait for connection to establish using configured timeout
+            handshake_wait = self.config.get('timeouts', {}).get('handshake_wait_s', 2.0)
+            time.sleep(handshake_wait)
             return self.connected
             
         except Exception as e:
