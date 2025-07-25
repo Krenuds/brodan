@@ -2,67 +2,59 @@ from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 import io
 import wave
-import subprocess
 import tempfile
 import os
+import subprocess
 
 app = FastAPI()
 
 class SynthesizeRequest(BaseModel):
     text: str
-    voice: str = "en_US-lessac-medium"
+    voice: str = "en_GB-alba-medium"
     format: str = "wav"
 
 @app.post("/synthesize")
 async def synthesize(request: SynthesizeRequest):
     """Synthesize text to speech using Piper TTS"""
     try:
-        # Create temporary files for input and output
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as text_file:
-            text_file.write(request.text)
-            text_file_path = text_file.name
-        
+        # Create temporary file for audio output
         with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as audio_file:
             audio_file_path = audio_file.name
         
-        # Use Piper TTS to synthesize speech
-        # Download model if needed and synthesize
-        cmd = [
-            "echo", request.text, "|", 
-            "piper", 
-            "--model", f"/models/{request.voice}.onnx",
-            "--output_file", audio_file_path
-        ]
-        
-        # For now, create a simple test audio file
-        # Generate a short sine wave as placeholder
-        import numpy as np
-        sample_rate = 22050
-        duration = len(request.text) * 0.1  # 0.1 seconds per character
-        t = np.linspace(0, duration, int(sample_rate * duration), False)
-        frequency = 440.0  # A4 note
-        audio_data = np.sin(frequency * 2 * np.pi * t) * 0.3
-        
-        # Convert to 16-bit PCM
-        audio_16bit = (audio_data * 32767).astype(np.int16)
-        
-        # Create WAV file in memory
-        audio_buffer = io.BytesIO()
-        with wave.open(audio_buffer, 'wb') as wav_file:
-            wav_file.setnchannels(1)  # Mono
-            wav_file.setsampwidth(2)  # 16-bit
-            wav_file.setframerate(sample_rate)
-            wav_file.writeframes(audio_16bit.tobytes())
-        
-        # Clean up temp files
-        os.unlink(text_file_path)
+        # Use Piper TTS command line (simpler and handles model downloads)
+        try:
+            # Use subprocess to call piper with downloaded model
+            model_path = f"/models/{request.voice}.onnx"
+            result = subprocess.run([
+                "bash", "-c", 
+                f"echo '{request.text}' | piper --model {model_path} --output-file {audio_file_path}"
+            ], 
+            capture_output=True, 
+            text=True
+            )
+            
+            if result.returncode != 0:
+                raise HTTPException(status_code=500, detail=f"Piper failed: {result.stderr}")
+            
+            # Read the generated audio file
+            if not os.path.exists(audio_file_path):
+                raise HTTPException(status_code=500, detail="Audio file was not generated")
+                
+            with open(audio_file_path, 'rb') as f:
+                audio_content = f.read()
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"TTS Error: {str(e)}")
+            
+        # Clean up temp file
         if os.path.exists(audio_file_path):
             os.unlink(audio_file_path)
         
+        # No cleanup needed for Python API
+        
         # Return audio as WAV
-        audio_buffer.seek(0)
         return Response(
-            content=audio_buffer.getvalue(),
+            content=audio_content,
             media_type="audio/wav",
             headers={
                 "Content-Disposition": "attachment; filename=speech.wav"

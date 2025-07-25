@@ -9,7 +9,7 @@ class PiperTTSClient:
     
     def __init__(self, host="piper-tts", port=8080):
         self.base_url = f"http://{host}:{port}"
-        self.voice = "en_US-lessac-medium"
+        self.voice = "en_GB-alba-medium"
         
     async def synthesize(self, text: str) -> Optional[bytes]:
         """Convert text to speech"""
@@ -25,9 +25,8 @@ class PiperTTSClient:
             )
             
             if response.status_code == 200:
-                result = response.json()
-                # For now, return placeholder data since we're testing connectivity
-                return b"placeholder_audio_data"
+                # TTS service returns WAV audio data directly, not JSON
+                return response.content
             else:
                 logging.error(f"TTS Error: {response.status_code} - {response.text}")
                 return None

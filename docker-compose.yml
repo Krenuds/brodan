@@ -32,7 +32,7 @@ services:
       - ASR_ENGINE=openai_whisper
       - ASR_MODEL_PATH=/data/whisper
       - UVICORN_LOG_LEVEL=critical
-      - UVICORN_ACCESS_LOG=false
+      - UVICORN_ACCESS_LOG_DISABLED=true
     volumes:
       - whisper-models:/data/whisper
     expose:

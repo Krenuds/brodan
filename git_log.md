@@ -1,10 +1,90 @@
 # Git Log
 
-Generated on: 2025-07-25 00:26:53
+Generated on: 2025-07-25 00:55:36
 
 ## Last 10 Commits
 
-### 1. Commit: 0b6b3239
+### 1. Commit: eea029cb
+
+- **Author:** Krenuds
+- **Date:** 2025-07-25 00:44:13 -0400
+- **Subject:** Log Spam Cleanup: Whisper-STT Logging Suppression
+
+**Full Commit Message:**
+```
+Log Spam Cleanup: Whisper-STT Logging Suppression
+
+🧹 EXCESSIVE LOGGING ELIMINATED:
+- Added logging: driver: "none" to whisper-stt service in docker-compose.yml
+- Completely suppresses HTTP request spam from onerahmet/openai-whisper-asr-webservice
+- Maintains full service functionality while eliminating console clutter
+- Preserves startup and health check logs for debugging
+
+✅ CLEAN OUTPUT VERIFIED:
+- Service remains fully operational for STT transcriptions
+- Health checks continue to function normally
+- No more hundreds of "POST /asr" HTTP 200 OK messages
+- Startup sequence remains clean and readable
+
+🎯 SIMPLE SOLUTION ACHIEVED:
+- No complex log filtering or custom commands required
+- Uses Docker's built-in logging driver configuration
+- Service continues to accept requests and process audio
+- Perfect balance of functionality and clean console output
+
+Console now shows only essential logs without whisper-stt HTTP spam.
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 2. Commit: 82994771
+
+- **Author:** Krenuds
+- **Date:** 2025-07-25 00:37:15 -0400
+- **Subject:** Boot Sequence Fix: Service Readiness Checks and Health Monitoring
+
+**Full Commit Message:**
+```
+Boot Sequence Fix: Service Readiness Checks and Health Monitoring
+
+🔧 STARTUP ORDER RESOLUTION:
+- Created ServiceChecker utility to verify all backend services before bot connection
+- Added comprehensive health checks for both STT and TTS services
+- Bot now waits for service readiness confirmation before Discord connection
+- Eliminated failed connection attempts during service initialization
+
+📊 SERVICE HEALTH MONITORING:
+- Added Docker Compose health checks with Python-based HTTP testing
+- Whisper STT: /docs endpoint health check with 30s start period
+- Piper TTS: /health endpoint health check with 15s start period
+- Replaced depends_on with service_healthy conditions for proper orchestration
+
+✅ CLEAN STARTUP ACHIEVED:
+- No more "Connection refused" errors during boot sequence
+- Progressive service readiness reporting: "🔍 Checking service readiness..."
+- Clear success confirmation: "✅ All services are ready\!"
+- Proper error handling with timeout and retry logic
+
+🎯 ARCHITECTURAL IMPROVEMENTS:
+- ServiceChecker: Concurrent health checking with async/await
+- Bot: Async startup flow with service dependency validation
+- Docker: Health check intervals optimized for each service type
+- Result: Robust, deterministic startup sequence
+
+Boot sequence now provides reliable, ordered service initialization without failed connections.
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 3. Commit: 0b6b3239
 
 - **Author:** Krenuds
 - **Date:** 2025-07-25 00:25:45 -0400
@@ -47,7 +127,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 2. Commit: 5025f56b
+### 4. Commit: 5025f56b
 
 - **Author:** Krenuds
 - **Date:** 2025-07-25 00:00:29 -0400
@@ -89,7 +169,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 3. Commit: 78522dbd
+### 5. Commit: 78522dbd
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:56:28 -0400
@@ -134,7 +214,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 4. Commit: 06e799a7
+### 6. Commit: 06e799a7
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:49:29 -0400
@@ -173,7 +253,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 5. Commit: a9d5f48c
+### 7. Commit: a9d5f48c
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:37:11 -0400
@@ -209,7 +289,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 6. Commit: a4eeb55d
+### 8. Commit: a4eeb55d
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:28:04 -0400
@@ -264,7 +344,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 7. Commit: a38e5e46
+### 9. Commit: a38e5e46
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 23:12:49 -0400
@@ -310,7 +390,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 8. Commit: e67554b6
+### 10. Commit: e67554b6
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 22:59:25 -0400
@@ -342,88 +422,6 @@ Phase 1 Immediate Fixes: Code review improvements and configuration corrections
 - Docker logs show clean integration without connection errors
 
 Phase 1 code review fixes complete - ready for Phase 2 Discord Audio Bridge implementation.
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
----
-
-### 9. Commit: 53118513
-
-- **Author:** Krenuds
-- **Date:** 2025-07-24 22:48:03 -0400
-- **Subject:** Phase 1 Complete: Replace WhisperLive with whisper.cpp HTTP API integration
-
-**Full Commit Message:**
-```
-Phase 1 Complete: Replace WhisperLive with whisper.cpp HTTP API integration
-
-🔄 MAJOR INTEGRATION UPDATE: WhisperLive → whisper.cpp
-- Replace WhisperLive WebSocket service with whisper.cpp HTTP API
-- Migrate from WebSocket client to HTTP client for STT service
-- Update Docker Compose to use onerahmet/openai-whisper-asr-webservice
-- Configure STT client for /asr endpoint with retry logic
-- Fix audio processing variable scope and connection timing
-
-📦 DOCKER SERVICES UPDATED:
-- whisper-stt: ghcr.io/collabora/whisperlive-gpu → onerahmet/openai-whisper-asr-webservice
-- Port mapping: 9090:9000 with internal container communication on port 9000
-- Environment: ASR_MODEL=base, ASR_ENGINE=openai_whisper
-
-🔧 STT CLIENT REWRITE (src/stt_client.py):
-- WebSocket → HTTP client using httpx library
-- Audio buffering with periodic transcription (3-second intervals)
-- PCM to WAV conversion for API compatibility
-- Connection retry logic (5 attempts, 2-second delays)
-- Error handling improvements
-
-⚙️ CONFIGURATION UPDATES:
-- config/stt_config.json: Port 9090 → 9000 for inter-container communication
-- requirements.txt: Added httpx>=0.25.0 for HTTP client
-- src/audio_processor.py: Enhanced retry logic for STT initialization
-
-✅ VALIDATION COMPLETED:
-- whisper.cpp service operational with OpenAI-compatible /asr API
-- STT client successfully connects via HTTP
-- No regression in Discord voice transcription functionality
-- Docker logs show clean integration with retry mechanisms
-- Audio processing pipeline functional with buffered transcription
-
-🎯 PHASE 1 SUCCESS CRITERIA MET:
-- ✓ whisper.cpp server operational with HTTP API
-- ✓ STT client connects to whisper.cpp HTTP service
-- ✓ No regression in Discord voice transcription
-- ✓ Docker logs show clean whisper.cpp integration
-- ✓ Audio buffering and processing working correctly
-
-Ready for Phase 2: Discord Audio Bridge implementation for Claude Code integration.
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
----
-
-### 10. Commit: 47c10c22
-
-- **Author:** Krenuds
-- **Date:** 2025-07-24 22:27:10 -0400
-- **Subject:** Update Claude Code integration strategy to Option B (Direct Audio)
-
-**Full Commit Message:**
-```
-Update Claude Code integration strategy to Option B (Direct Audio)
-
-- Replace WhisperLive with whisper.cpp for OpenAI-compatible API
-- Create Discord audio bridge for direct voice-mode MCP integration
-- Eliminate WebSocket->HTTP conversion overhead for better performance
-- Maintain all Discord-specific voice capture capabilities
-- Enable seamless Claude Code conversations via Discord voice channels
-
-Architecture: Discord Voice → Audio Bridge → whisper.cpp → Voice-Mode MCP → Claude Code
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
