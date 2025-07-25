@@ -31,12 +31,14 @@ services:
       - ASR_MODEL=base
       - ASR_ENGINE=openai_whisper
       - ASR_MODEL_PATH=/data/whisper
-      - UVICORN_LOG_LEVEL=error
+      - UVICORN_LOG_LEVEL=critical
       - UVICORN_ACCESS_LOG=false
     volumes:
       - whisper-models:/data/whisper
     expose:
       - "9000"
+    logging:
+      driver: "none"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/docs')"]
       interval: 10s
