@@ -1,7 +1,7 @@
 # Claude Code Integration Module
 
 ## Project Overview
-Voice-enabled Claude Code integration for Discord voice bot, bridging Discord STT transcription pipeline to Claude Code system agent for conversational coding.
+Voice-enabled Claude Code integration for Discord voice bot, enabling direct voice conversations with Claude Code through Discord voice channels.
 
 ## Current System Architecture
 
@@ -11,108 +11,64 @@ Voice-enabled Claude Code integration for Discord voice bot, bridging Discord ST
 - **Piper TTS** (port 8080): Text-to-speech HTTP service
 
 ### Key Components
-- `src/stt_client.py` (363 lines): Specialized Discord audio processing with VAD, resampling, and segment tracking
+- `src/stt_client.py`: Discord audio processing with VAD, resampling, and segment tracking
 - `src/audio_processor.py`: Discord voice channel audio sink with energy-based VAD
 - `src/bot.py`: Discord bot with auto-join and transcription monitoring
 
 ## Integration Challenge
 
-**Goal**: Pipe Discord voice transcriptions into Claude Code for conversational system agent interaction.
+**Goal**: Enable voice conversations with Claude Code directly from Discord voice channels.
 
-**Problem**: Voice-mode MCP provides generic microphone → Claude Code integration but cannot capture from Discord voice channels or handle multi-user audio streams.
+**Problem**: Voice-mode MCP requires OpenAI-compatible STT API, but our WhisperLive uses WebSocket protocol.
 
-**Solution**: Hybrid approach preserving Discord voice capture while adding Claude Code integration.
+**Solution**: Replace WhisperLive with whisper.cpp server + create Discord audio bridge for direct integration.
 
-## Integration Architecture Options
+## Selected Implementation: Direct Audio Integration (Option B)
 
-### Option A: Named Pipe Bridge (Recommended)
+### Architecture
 ```
-Discord Voice → STT Client → Named Pipe → Voice-Mode MCP → Claude Code
-```
-
-**Implementation:**
-- Modify `src/stt_client.py` to write transcriptions to `/tmp/discord_stt_pipe`
-- Configure voice-mode to read from named pipe instead of microphone
-- Minimal changes to existing codebase
-
-**Pros:** 
-- Preserves all Discord-specific functionality
-- Simple Unix IPC mechanism
-- No additional dependencies
-
-**Cons:**
-- Platform-specific (Unix/Linux only)
-- Requires voice-mode modification for pipe input
-
-### Option B: HTTP API Bridge
-```
-Discord Voice → STT Client → HTTP Server → Voice-Mode MCP → Claude Code
+Discord Voice → Audio Bridge → whisper.cpp (OpenAI API) → Voice-Mode MCP → Claude Code
 ```
 
-**Implementation:**
-- Add HTTP server to `src/stt_client.py` mimicking OpenAI STT API
-- Configure voice-mode: `VOICEMODE_STT_BASE_URL="http://localhost:9091/v1"`
-- RESTful interface for transcription streaming
+### Implementation Strategy
 
-**Pros:**
-- Cross-platform compatibility
-- Standard HTTP/REST interface
-- Works with existing voice-mode configuration
+#### Phase 1: Replace WhisperLive with whisper.cpp
+1. **Update Docker Compose** (`docker-compose.yml`):
+   - Replace WhisperLive service with whisper.cpp server
+   - Expose OpenAI-compatible API on port 9090
+   - Maintain model persistence via volumes
 
-**Cons:**
-- Additional HTTP server complexity
-- Network overhead for local communication
+2. **Update STT Client** (`src/stt_client.py`):
+   - Replace WebSocket client with HTTP client for whisper.cpp
+   - Implement OpenAI API format requests
+   - Maintain existing audio processing capabilities
 
-### Option C: Custom MCP Server
-```
-Discord Voice → STT Client → Custom MCP Server → Claude Code
-```
+#### Phase 2: Create Discord Audio Bridge
+1. **Discord Audio Bridge** (`src/discord_audio_bridge.py`):
+   - FastAPI server on port 9091
+   - OpenAI-compatible `/v1/audio/transcriptions` endpoint
+   - Direct integration with Discord AudioSink
+   - Real-time audio streaming from Discord channels
 
-**Implementation:**
-- Build dedicated MCP server connecting to Discord STT pipeline
-- Direct integration with Claude Code via MCP protocol
-- Custom tools for Discord-specific voice management
+2. **Audio Processor Integration** (`src/audio_processor.py`):
+   - Stream Discord audio to both whisper.cpp and audio bridge
+   - Maintain VAD capabilities for voice activity detection
+   - Support multiple audio formats for voice-mode compatibility
 
-**Pros:**
-- Full control over integration
-- Native MCP protocol support
-- Discord-aware voice commands
-
-**Cons:**
-- Most development effort
-- Custom MCP server maintenance
-
-## Recommended Implementation Strategy
-
-### Phase 1: HTTP API Bridge (Quick Win)
-1. **Extend STT Client** (`src/stt_client.py`):
-   - Add FastAPI HTTP server on port 9091
-   - Implement OpenAI-compatible `/v1/audio/transcriptions` endpoint
-   - Stream real-time transcriptions via Server-Sent Events
-
-2. **Install Voice-Mode MCP**:
+#### Phase 3: Voice-Mode MCP Integration
+1. **Configure Voice-Mode**:
    ```bash
-   claude mcp add voice-mode --env OPENAI_API_KEY=dummy
-   export VOICEMODE_STT_BASE_URL="http://localhost:9091/v1"
-   export VOICEMODE_TTS_BASE_URL="http://localhost:8080/v1"
+   claude mcp add voice-mode --env VOICEMODE_STT_BASE_URL=http://localhost:9091/v1
+   export VOICEMODE_TTS_BASE_URL=http://localhost:8080/v1
+   export OPENAI_API_KEY=dummy  # Not needed for local STT
    ```
 
-3. **Test Integration**:
-   - Discord voice → STT → HTTP bridge → Claude Code
-   - Verify transcription accuracy and latency
+2. **Enhanced Integration**:
+   - TTS responses played back in Discord voice channels
+   - Multi-user voice command handling
+   - Context-aware conversations per Discord user
 
-### Phase 2: Custom MCP Server (Long-term)
-1. **Discord MCP Server** (`src/discord_mcp_server.py`):
-   - MCP tools: `listen_to_discord`, `get_transcription`, `speak_in_discord`
-   - Direct WebSocket connection to existing STT client
-   - Discord-aware commands and context
-
-2. **Enhanced Voice Commands**:
-   - "Claude, explain this error" → screenshot + code analysis
-   - "Claude, commit these changes" → git integration
-   - "Claude, read the logs" → Docker log analysis
-
-## Technical Requirements
+## Technical Implementation
 
 ### Dependencies
 ```txt
@@ -120,143 +76,196 @@ Discord Voice → STT Client → Custom MCP Server → Claude Code
 fastapi>=0.104.0
 uvicorn>=0.24.0
 sse-starlette>=1.6.5
+httpx>=0.25.0  # For whisper.cpp HTTP client
 ```
 
 ### Environment Configuration
 ```bash
-# Claude Code Integration
-VOICEMODE_STT_BASE_URL="http://localhost:9091/v1"
-VOICEMODE_TTS_BASE_URL="http://localhost:8080/v1"
+# Discord Bot
+DISCORD_TOKEN=your_discord_token
+
+# Claude Code Voice Integration
+VOICEMODE_STT_BASE_URL=http://localhost:9091/v1
+VOICEMODE_TTS_BASE_URL=http://localhost:8080/v1
+VOICEMODE_DEBUG=true
+OPENAI_API_KEY=dummy  # Not needed for local STT
 CLAUDE_CODE_VOICE_ENABLED=true
-DISCORD_STT_BRIDGE_PORT=9091
+
+# Discord Audio Bridge
+DISCORD_AUDIO_BRIDGE_PORT=9091
+WHISPER_CPP_BASE_URL=http://localhost:9090/v1
 ```
 
 ### Docker Compose Updates
 ```yaml
-# Add to existing docker-compose.yml
 services:
   app:
     ports:
       - "8000:8000"
-      - "9091:9091"  # STT HTTP bridge
+      - "9091:9091"  # Discord audio bridge
     environment:
       - VOICEMODE_STT_BASE_URL=http://localhost:9091/v1
+      - VOICEMODE_TTS_BASE_URL=http://localhost:8080/v1
+      - WHISPER_CPP_BASE_URL=http://whisper-stt:9090/v1
+
+  whisper-stt:
+    image: ghcr.io/ggerganov/whisper.cpp:server
+    ports:
+      - "9090:9090"
+    volumes:
+      - whisper-models:/models
+    command: ["--host", "0.0.0.0", "--port", "9090", "--model", "/models/ggml-base.en.bin"]
+
+  piper-tts:
+    build: ./services/piper-http
+    ports:
+      - "8080:8080"
+    volumes:
+      - piper-models:/models
 ```
-
-## Success Criteria
-
-### Phase 1 Completion
-- [ ] HTTP bridge server running on port 9091
-- [ ] Voice-mode MCP connects to Discord STT bridge
-- [ ] End-to-end: Discord voice → Claude Code response
-- [ ] Transcription latency < 2 seconds
-- [ ] No regression in existing Discord bot functionality
-
-### Phase 2 Completion
-- [ ] Custom Discord MCP server operational
-- [ ] Discord-aware voice commands working
-- [ ] Multi-user voice command handling
-- [ ] TTS responses play in Discord voice channel
-- [ ] Git integration via voice commands
-
-### System Integration Tests
-- [ ] User speaks in Discord → Claude Code executes command → TTS response
-- [ ] Multiple users can issue voice commands without interference
-- [ ] Error handling: STT failures, Claude Code timeouts, TTS errors
-- [ ] Docker log validation shows clean service communication
 
 ## Implementation Files
 
 ### New Files
-- `src/stt_http_bridge.py` - HTTP API bridge server
-- `src/discord_mcp_server.py` - Custom MCP server (Phase 2)
-- `config/voice_integration_config.json` - Integration settings
+- `src/discord_audio_bridge.py` - OpenAI-compatible audio bridge for Discord
+- `tests/test_voice_integration.py` - Automated test suite
+- `.env.example` - Environment variable documentation
 
 ### Modified Files
-- `src/stt_client.py` - Add HTTP bridge functionality
-- `docker-compose.yml` - Add bridge port and environment variables
-- `requirements.txt` - Add FastAPI and MCP dependencies
+- `src/stt_client.py` - Replace WebSocket with HTTP client for whisper.cpp
+- `src/audio_processor.py` - Add audio bridge integration
+- `docker-compose.yml` - Replace WhisperLive with whisper.cpp
+- `requirements.txt` - Add FastAPI and HTTP client dependencies
 - `CLAUDE.md` - Update with voice integration commands
+
+## Success Criteria
+
+### Phase 1 Completion
+- [ ] whisper.cpp server operational with OpenAI-compatible API
+- [ ] STT client successfully connects to whisper.cpp HTTP API
+- [ ] No regression in existing Discord voice transcription
+- [ ] Docker logs show clean whisper.cpp integration
+
+### Phase 2 Completion
+- [ ] Discord audio bridge operational on port 9091
+- [ ] OpenAI-compatible STT endpoints responding correctly
+- [ ] Real-time Discord audio streaming to bridge
+- [ ] Audio format conversions working properly
+
+### Phase 3 Completion
+- [ ] Voice-mode MCP connects to Discord audio bridge
+- [ ] End-to-end: Discord voice → Claude Code response
+- [ ] TTS responses play in Discord voice channels
+- [ ] Multi-user voice commands work without interference
+- [ ] Transcription latency < 2 seconds
+
+### Integration Tests
+- [ ] Automated test suite passes with >90% coverage
+- [ ] Performance benchmarks meet latency requirements
+- [ ] Docker log validation shows error-free operation
+- [ ] End-to-end voice conversation workflow functional
 
 ## Testing Strategy
 
 ### Development Testing
-1. **Docker Logs Validation** (per CLAUDE.md requirements):
+1. **Docker Services Validation**:
    ```bash
    docker-compose up --build
-   docker-compose logs -f app     # Monitor Discord bot
-   docker-compose logs -f whisper-stt  # Monitor STT service
+   docker-compose logs -f app         # Monitor Discord bot
+   docker-compose logs -f whisper-stt # Monitor whisper.cpp
+   docker-compose logs -f piper-tts   # Monitor TTS service
    ```
 
-2. **Integration Testing**:
+2. **API Endpoint Testing**:
    ```bash
-   # Test STT bridge API
-   curl -X POST http://localhost:9091/v1/audio/transcriptions \
-     -H "Content-Type: application/json" \
-     -d '{"test": true}'
-   
-   # Test voice-mode connection
-   claude mcp status voice-mode
+   # Test whisper.cpp API
+   curl -X POST http://localhost:9090/v1/audio/transcriptions \
+     -H "Content-Type: multipart/form-data" \
+     -F "file=@test_audio.wav" \
+     -F "model=whisper-1"
+
+   # Test Discord audio bridge
+   curl http://localhost:9091/health
+   curl http://localhost:9091/v1/audio/transcriptions
    ```
 
-3. **End-to-End Testing**:
-   - Join Discord voice channel
-   - Speak command: "Claude, list files in current directory"
-   - Verify: STT → HTTP bridge → Claude Code → response
-   - Check Docker logs for error-free operation
+3. **Voice-Mode Integration**:
+   ```bash
+   # Check MCP server status
+   claude mcp status voice-mode
+   
+   # Start voice conversation
+   claude converse
+   ```
 
 ### Performance Benchmarks
-- **Transcription Latency**: < 2 seconds from speech to text
-- **Command Execution**: < 5 seconds for simple commands
-- **TTS Response**: < 3 seconds for short responses
-- **Memory Usage**: < 500MB additional for integration components
+- **End-to-End Latency**: < 2 seconds (Discord voice → Claude Code response)
+- **STT Processing**: < 1 second for typical voice segments
+- **Audio Bridge Latency**: < 100ms for audio forwarding
+- **Memory Usage**: < 200MB additional for bridge service
 
 ## Development Commands
 
 ### Setup Voice Integration
 ```bash
-# Install Claude Code
-npm install -g @anthropic-ai/claude-code
-
 # Install voice-mode MCP
-claude mcp add voice-mode --env OPENAI_API_KEY=dummy
-
-# Configure for Discord STT bridge
-export VOICEMODE_STT_BASE_URL="http://localhost:9091/v1"
-export VOICEMODE_TTS_BASE_URL="http://localhost:8080/v1"
+claude mcp add voice-mode \
+  --env VOICEMODE_STT_BASE_URL=http://localhost:9091/v1 \
+  --env VOICEMODE_TTS_BASE_URL=http://localhost:8080/v1 \
+  --env OPENAI_API_KEY=dummy
 
 # Start integrated system
 docker-compose up --build
-claude converse  # Start voice-enabled Claude Code
+
+# Start voice conversation
+claude converse
 ```
 
 ### Debug Commands
 ```bash
-# Test STT bridge health
-curl http://localhost:9091/health
+# Test whisper.cpp health
+curl http://localhost:9090/health
 
-# Monitor transcription stream
+# Test Discord audio bridge
+curl http://localhost:9091/health
 curl http://localhost:9091/v1/stream
 
-# Check MCP server status
+# Monitor transcription logs
+docker-compose logs -f whisper-stt
+
+# Check voice-mode status
 claude mcp list
 claude mcp status voice-mode
 ```
 
+## Implementation Advantages
+
+### Direct Integration Benefits
+- **Reduced Latency**: Eliminates WebSocket → HTTP conversion overhead
+- **Simplified Architecture**: Native OpenAI API compatibility
+- **Better Performance**: whisper.cpp optimized for production use
+- **Seamless Voice-Mode Integration**: No protocol conversion needed
+
+### Maintained Capabilities
+- **Discord-Specific Features**: Multi-user audio, VAD, resampling
+- **Real-Time Processing**: Low-latency voice activity detection
+- **Robust Audio Handling**: Energy-based VAD and segment tracking
+- **Fallback Safety**: Graceful degradation if services fail
+
 ## Future Enhancements
 
 ### Advanced Voice Features
-- **Speaker Recognition**: Identify and tag different Discord users
-- **Context Awareness**: Remember conversation history per user
-- **Multi-language Support**: Dynamic language switching via voice commands
-- **Voice Authentication**: Secure command execution via voice biometrics
+- **Speaker Recognition**: Identify and tag different Discord users in conversations
+- **Context Persistence**: Remember conversation history per Discord user
+- **Custom Voice Commands**: Project-specific shortcuts and macros
+- **Multi-Language Support**: Dynamic language switching via voice
 
 ### Claude Code Integration
 - **Visual Context**: Screenshot integration for debugging assistance
 - **Git Workflow**: Voice-driven commit, push, and PR creation
-- **Real-time Collaboration**: Multiple developers with shared Claude Code session
-- **Custom Voice Commands**: Project-specific command shortcuts
+- **Real-Time Collaboration**: Shared Claude Code sessions with multiple developers
+- **Custom Tools**: Discord-aware MCP tools for voice-driven development
 
 ---
 
-**Note**: This integration preserves the specialized Discord voice capture system (363-line STT client with VAD, resampling, and multi-user support) while adding Claude Code conversational capabilities through the established MCP protocol.
+**Note**: This implementation replaces WhisperLive with whisper.cpp for better voice-mode MCP compatibility while preserving all Discord-specific voice capture capabilities through the custom audio bridge architecture.

@@ -1,10 +1,35 @@
 # Git Log
 
-Generated on: 2025-07-24 21:59:15
+Generated on: 2025-07-24 22:05:59
 
-## Complete Git History (26 Commits)
+## Complete Git History (27 Commits)
 
-### 1. Commit: 482d3a90
+### 1. Commit: c14f3702
+
+- **Author:** Krenuds
+- **Date:** 2025-07-24 22:01:26 -0400
+- **Subject:** Add Claude Code integration documentation and specification
+
+**Full Commit Message:**
+```
+Add Claude Code integration documentation and specification
+
+- Created CLAUDE_CODE_INTEGRATION.md with comprehensive voice integration plan
+- Documented hybrid approach preserving Discord voice capture system
+- Defined 3 architecture options: Named Pipe, HTTP Bridge, Custom MCP
+- Specified phased implementation strategy with HTTP API bridge (Phase 1)
+- Included technical requirements, success criteria, and testing strategy
+- Preserves existing 363-line STT client with Discord-specific features
+- Integration enables Discord voice → Claude Code conversational coding
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+---
+
+### 2. Commit: 482d3a90
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:49:33 -0400
@@ -24,7 +49,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 2. Commit: efdc696b
+### 3. Commit: efdc696b
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:46:43 -0400
@@ -44,7 +69,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 3. Commit: e533c35c
+### 4. Commit: e533c35c
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:41:26 -0400
@@ -71,7 +96,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 4. Commit: 1b431b09
+### 5. Commit: 1b431b09
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:34:34 -0400
@@ -91,7 +116,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 5. Commit: 22be2460
+### 6. Commit: 22be2460
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:28:11 -0400
@@ -120,7 +145,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 6. Commit: 31040932
+### 7. Commit: 31040932
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:27:58 -0400
@@ -143,7 +168,7 @@ reducing complexity and focusing on core transcription features.
 
 ---
 
-### 7. Commit: e7c14d0f
+### 8. Commit: e7c14d0f
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:26:13 -0400
@@ -171,7 +196,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 8. Commit: b0d1e402
+### 9. Commit: b0d1e402
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:22:11 -0400
@@ -197,7 +222,7 @@ The logs now show:
 
 ---
 
-### 9. Commit: 547a4090
+### 10. Commit: 547a4090
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:19:15 -0400
@@ -226,7 +251,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 10. Commit: 23a1072e
+### 11. Commit: 23a1072e
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 21:08:37 -0400
@@ -257,7 +282,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 11. Commit: 7b9b2839
+### 12. Commit: 7b9b2839
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:53:53 -0400
@@ -283,7 +308,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 12. Commit: 03cffbdf
+### 13. Commit: 03cffbdf
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:51:09 -0400
@@ -307,7 +332,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 13. Commit: ac8c8244
+### 14. Commit: ac8c8244
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:29:07 -0400
@@ -330,7 +355,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 14. Commit: 9fc005f1
+### 15. Commit: 9fc005f1
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:22:34 -0400
@@ -354,7 +379,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 15. Commit: 0c04626f
+### 16. Commit: 0c04626f
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 20:18:04 -0400
@@ -383,7 +408,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 16. Commit: 55e39504
+### 17. Commit: 55e39504
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:56:33 -0400
@@ -406,7 +431,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 17. Commit: 27b62955
+### 18. Commit: 27b62955
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:56:19 -0400
@@ -430,7 +455,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 18. Commit: 929b3607
+### 19. Commit: 929b3607
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:46:56 -0400
@@ -455,7 +480,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 19. Commit: cde208cb
+### 20. Commit: cde208cb
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:39:15 -0400
@@ -477,7 +502,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 20. Commit: feb53b7d
+### 21. Commit: feb53b7d
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:36:05 -0400
@@ -502,7 +527,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 21. Commit: 92e04489
+### 22. Commit: 92e04489
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:28:22 -0400
@@ -529,7 +554,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 22. Commit: e4be8b13
+### 23. Commit: e4be8b13
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 19:21:27 -0400
@@ -564,7 +589,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 23. Commit: e7458d76
+### 24. Commit: e7458d76
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 17:34:02 -0400
@@ -593,7 +618,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 24. Commit: 0991485d
+### 25. Commit: 0991485d
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 17:28:56 -0400
@@ -616,7 +641,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 25. Commit: ec9be5cc
+### 26. Commit: ec9be5cc
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 17:23:19 -0400
@@ -661,7 +686,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### 26. Commit: 3f25f30b
+### 27. Commit: 3f25f30b
 
 - **Author:** Krenuds
 - **Date:** 2025-07-24 17:02:53 -0400
