@@ -20,5 +20,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Default to running the test service, but can be overridden
-CMD ["python", "main.py"]
+# Run the Discord bot
+CMD ["python", "-m", "src.bot"]
