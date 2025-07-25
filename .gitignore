@@ -81,3 +81,6 @@ Thumbs.db
 gh_*.tar.gz
 gh_*/
 gh
+
+# Debug audio files
+debug_audio/
